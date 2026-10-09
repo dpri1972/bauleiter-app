@@ -132,6 +132,18 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 .sum{font-weight:700;margin-top:4px}
 .logo-prev{max-height:60px;max-width:200px;display:block;margin:6px 0}
 .hint{padding:10px 12px;border-radius:10px;background:var(--orgbg);color:#7a3d00;font-size:14px}
+.pvtools{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px;margin-bottom:8px;border:1px solid var(--bd);border-radius:12px;background:#fff}
+.tgrp{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.tbtn{min-width:40px;height:40px;padding:0 8px;border:1px solid var(--bd);border-radius:10px;background:#fff;font:inherit;font-size:18px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--txt)}
+.tbtn.on{background:var(--blubg);border-color:var(--pri);box-shadow:inset 0 0 0 1px var(--pri)}.tbtn:disabled{opacity:.35}
+.cbtn{width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px #bbb;cursor:pointer;padding:0}.cbtn.on{box-shadow:0 0 0 3px var(--pri)}
+.wdot{display:block;border-radius:50%;background:var(--txt)}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%}
+.rgrid label{font-size:12px;font-weight:600;color:var(--mut)}.rgrid input,.rgrid select{min-height:38px;padding:6px 8px;font-size:15px}
+@media(min-width:700px){.rgrid{grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.3fr}}
+.pvstage.drawmode{cursor:crosshair}
+.annwrap{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}.annwrap svg{display:block;width:100%;height:100%;overflow:visible}
+.psnip .snipin{position:absolute;left:0;top:0;max-width:none}.psnip .snipin img{display:block;width:100%}
 .pthumb{flex:none;width:64px;height:64px;object-fit:cover;object-position:center;border-radius:8px;background:#e5e9ef;border:1px solid var(--bd)}
 .pmthumb{display:block;max-height:150px;max-width:100%;margin:0 auto 6px;border:1px solid var(--bd);border-radius:8px}
 .pvbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
@@ -150,7 +162,6 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 .pdot{display:inline-block;flex:none;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #bbb}
 .pleg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin:4px 2px 8px}.pleg span{display:inline-flex;align-items:center;gap:4px}
 .psnip{position:relative;overflow:hidden;height:190px;--sh:95px;background:#e5e9ef;border-radius:10px;border:1px solid var(--bd)}
-.psnip img{position:absolute;left:0;top:0;max-width:none;display:block}
 .pbar{height:8px;margin:8px 0;border-radius:4px;background:#e5e9ef;overflow:hidden}.pbar i{display:block;height:100%;width:0;background:var(--pri);transition:width .2s}
 .r-plan{break-inside:avoid;margin:8px 0 12px}
 .r-planimg{position:relative}.r-planimg img{display:block;width:100%;border:1px solid #bbb}
@@ -212,7 +223,7 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 <style id="pageStyle"></style>
 <script>
 'use strict';
-const VERSION='1.1';
+const VERSION='1.2';
 /* ================= Hilfsfunktionen ================= */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -257,9 +268,9 @@ const ICON={
 };
 
 /* ================= IndexedDB ================= */
-const STORES=['projects','contacts','diary','defects','tasks','protocols','photos','meta','plans'];
-const DATA=['projects','contacts','diary','defects','tasks','protocols','plans'];
-const DB_VER=2; /* v2: Store „plans“ ergänzt – bestehende Daten bleiben unverändert */
+const STORES=['projects','contacts','diary','defects','tasks','protocols','photos','meta','plans','annots'];
+const DATA=['projects','contacts','diary','defects','tasks','protocols','plans','annots'];
+const DB_VER=3; /* v2: Store „plans“, v3: Store „annots“ (Zeichnungen/Reihen) ergänzt – bestehende Daten bleiben unverändert */
 let db;
 function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open('bauleiter-app',DB_VER);r.onupgradeneeded=()=>{const d=r.result;for(const s of STORES)if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})};
  r.onsuccess=()=>{const d=r.result;d.onversionchange=()=>{d.close();alert('Die Bauleiter-App wurde in einem anderen Fenster aktualisiert. Bitte diese Seite neu laden.')};res(d)};r.onerror=()=>rej(r.error);
@@ -272,7 +283,7 @@ const dbDel=(s,id)=>req(s,'readwrite',st=>st.delete(id));
 const dbClear=s=>req(s,'readwrite',st=>st.clear());
 const dbPutMany=(s,arr)=>req(s,'readwrite',st=>{arr.forEach(o=>st.put(o))});
 
-const S={projects:[],contacts:[],diary:[],defects:[],tasks:[],protocols:[],plans:[],settings:{}};
+const S={projects:[],contacts:[],diary:[],defects:[],tasks:[],protocols:[],plans:[],annots:[],settings:{}};
 async function loadAll(){for(const s of DATA)S[s]=await dbAll(s);const m=await dbGet('meta','settings');S.settings=m?m.value:{}}
 let persistAsked=false;
 async function save(store,obj){const now=new Date().toISOString();obj.updatedAt=now;if(!obj.createdAt)obj.createdAt=now;await dbPut(store,obj);const a=S[store];const i=a.findIndex(x=>x.id===obj.id);if(i>=0)a[i]=obj;else a.push(obj);
@@ -318,7 +329,7 @@ const statusBadge=s=>`<span class="badge ${({'offen':'b-offen','in Arbeit':'b-ar
 const pBadge=s=>`<span class="badge ${s==='In Ausführung'?'b-aktiv':s==='Abgeschlossen'?'':'b-abg'}">${esc(s||'–')}</span>`;
 const tempStr=w=>{const a=[];if(w.tempMorning!==''&&w.tempMorning!=null)a.push('morgens '+w.tempMorning+' °C');if(w.tempNoon!==''&&w.tempNoon!=null)a.push('mittags '+w.tempNoon+' °C');return a.join(', ')||'–'};
 function contactLinks(c){const l=[];if(c.phone)l.push(`<a href="${telHref(c.phone)}" onclick="event.stopPropagation()">📞 ${esc(c.phone)}</a>`);if(c.mobile)l.push(`<a href="${telHref(c.mobile)}" onclick="event.stopPropagation()">📱 ${esc(c.mobile)}</a>`);if(c.email)l.push(`<a href="mailto:${esc(c.email)}" onclick="event.stopPropagation()">✉️ ${esc(c.email)}</a>`);return l.length?`<div class="links">${l.join('')}</div>`:''}
-function filterDefects(list,status,firma){return list.filter(d=>(!firma||d.firma===firma)&&(status==='alle'||!status?true:status==='aktiv'?ACTIVE_D.includes(d.status):status==='überfällig'?isOverdue(d):d.status===status))}
+function filterDefects(list,status,firma,bf,reihe){return list.filter(d=>(!firma||d.firma===firma)&&(!bf||d.baufeld===bf)&&(!reihe||String(d.reihe??'').trim()===String(reihe).trim())&&(status==='alle'||!status?true:status==='aktiv'?ACTIVE_D.includes(d.status):status==='überfällig'?isOverdue(d):d.status===status))}
 const DFILTER=[['aktiv','Offen + in Arbeit'],['überfällig','Überfällig'],['offen','offen'],['in Arbeit','in Arbeit'],['erledigt','erledigt'],['abgenommen','abgenommen'],['alle','Alle']];
 
 /* ================= Router ================= */
@@ -479,26 +490,26 @@ App.saveDiary=async(pdf)=>{const d=DRAFT;if(!d.date)return toast('Bitte Datum an
 App.delDiary=async()=>{if(!confirm('Tagebucheintrag löschen?'))return;const d=DRAFT;await discardDraft();await remove('diary',d.id);toast('Gelöscht');go(`#/projekt/${d.projectId}/tagebuch`)};
 
 /* ================= Mängel ================= */
-const DF={status:'aktiv',firma:'',q:''};
-function defList(p){const q=lc(DF.q);const l=filterDefects(S.defects.filter(d=>d.projectId===p.id),DF.status,DF.firma).filter(d=>!q||lc([d.nr,d.title,d.desc,d.location,d.firma].join(' ')).includes(q)).sort((a,b)=>(isOverdue(b)-isOverdue(a))||((a.deadline||'9999').localeCompare(b.deadline||'9999'))||(a.nr-b.nr));
- return l.length?`<div class="list">${l.map(d=>{const ov=isOverdue(d);return `<a class="row ${ov?'overdue':''}" href="#/projekt/${p.id}/mangel/${d.id}">${d.photos?.length?`<img class="thumb" data-photo="${d.photos[0]}" alt="">`:`<div class="thumb">#${d.nr}</div>`}<div class="grow"><div class="rt ell">#${d.nr} ${esc(d.title)}</div><div class="mut sm ell">${d.pin?'📍 ':''}${[d.location,d.firma].filter(Boolean).map(esc).join(' · ')||'&nbsp;'}</div><div class="sm ${ov?'over':'mut'}">${d.deadline?'Frist '+fmtD(d.deadline)+(ov?' – überfällig':''):'keine Frist'}</div></div>${statusBadge(d.status)}</a>`}).join('')}</div>`:'<div class="card empty">Keine Mängel für diesen Filter.</div>'}
-App.df=(k,v,pid)=>{DF[k]=v;if(k==='q'){const el=$('#dlist');el.innerHTML=defList(proj(pid));hydratePhotos(el)}else render()};
+const DF={status:'aktiv',firma:'',q:'',bf:'',reihe:''};
+function defList(p){const q=lc(DF.q);const l=filterDefects(S.defects.filter(d=>d.projectId===p.id),DF.status,DF.firma,DF.bf,DF.reihe).filter(d=>!q||lc([d.nr,d.title,d.desc,d.location,d.firma,bfr(d)].join(' ')).includes(q)).sort((a,b)=>(isOverdue(b)-isOverdue(a))||((a.deadline||'9999').localeCompare(b.deadline||'9999'))||(a.nr-b.nr));
+ return l.length?`<div class="list">${l.map(d=>{const ov=isOverdue(d);return `<a class="row ${ov?'overdue':''}" href="#/projekt/${p.id}/mangel/${d.id}">${d.photos?.length?`<img class="thumb" data-photo="${d.photos[0]}" alt="">`:`<div class="thumb">#${d.nr}</div>`}<div class="grow"><div class="rt ell">#${d.nr} ${esc(d.title)}</div><div class="mut sm ell">${d.pin?'📍 ':''}${[bfr(d),d.location,d.firma].filter(Boolean).map(esc).join(' · ')||'&nbsp;'}</div><div class="sm ${ov?'over':'mut'}">${d.deadline?'Frist '+fmtD(d.deadline)+(ov?' – überfällig':''):'keine Frist'}</div></div>${statusBadge(d.status)}</a>`}).join('')}</div>`:'<div class="card empty">Keine Mängel für diesen Filter.</div>'}
+App.df=(k,v,pid)=>{DF[k]=v;if(k==='bf')DF.reihe='';if(k==='q'){const el=$('#dlist');el.innerHTML=defList(proj(pid));hydratePhotos(el)}else render()};
 function tabDefects(p){const firms=firmsOf(p);
- return `<div class="btnrow" style="margin:0 0 12px"><button class="btn" onclick="go('#/projekt/${p.id}/mangel/neu')">+ Mangel erfassen</button><button class="btn sec" onclick="go('#/bericht/maengel?p=${p.id}&status=${encodeURIComponent(DF.status)}&firma=${encodeURIComponent(DF.firma)}&fotos=1&plaene=1')">📄 Mängelbericht</button></div>
+ return `<div class="btnrow" style="margin:0 0 12px"><button class="btn" onclick="go('#/projekt/${p.id}/mangel/neu')">+ Mangel erfassen</button><button class="btn sec" onclick="go('#/bericht/maengel?p=${p.id}&status=${encodeURIComponent(DF.status)}&firma=${encodeURIComponent(DF.firma)}&bf=${encodeURIComponent(DF.bf)}&reihe=${encodeURIComponent(DF.reihe)}&fotos=1&plaene=1')">📄 Mängelbericht</button></div>
  <div class="searchbar">${ICON.search}<input type="search" placeholder="Mängel durchsuchen …" value="${esc(DF.q)}" oninput="App.df('q',this.value,'${p.id}')"></div>
  <div class="chips">${DFILTER.map(([k,l])=>`<button class="${DF.status===k?'on':''}" onclick="App.df('status','${k}')">${l}</button>`).join('')}</div>
- <label class="fld"><span>Firma</span><select onchange="App.df('firma',this.value)"><option value="">Alle Firmen</option>${firms.map(f=>opt(f,DF.firma)).join('')}</select></label>
+ <div class="grid g2m"><label class="fld"><span>Firma</span><select onchange="App.df('firma',this.value)"><option value="">Alle Firmen</option>${firms.map(f=>opt(f,DF.firma)).join('')}</select></label>${(()=>{const b=bfsOf(p.id);if(DF.bf&&!b.includes(DF.bf))DF.bf='';return b.length?`<label class="fld"><span>Baufeld</span><select onchange="App.df('bf',this.value)"><option value="">Alle Baufelder</option>${b.map(f=>opt(f,DF.bf)).join('')}</select></label>`:''})()}</div>${DF.bf?`<label class="fld"><span>Reihe (${esc(DF.bf)})</span><input type="search" inputmode="numeric" value="${esc(DF.reihe)}" placeholder="alle Reihen" onchange="App.df('reihe',this.value.trim())"></label>`:''}
  <div id="dlist">${defList(p)}</div>`}
 function viewDefectEdit(p,did,q){
- if(!DRAFT||DRAFT._key!==location.hash){if(did==='neu'){const nr=Math.max(0,...S.defects.filter(d=>d.projectId===p.id).map(d=>d.nr||0))+1;DRAFT={id:uid(),projectId:p.id,nr,title:'',desc:'',location:'',firma:'',deadline:addDays(todayISO(),14),status:'offen',photos:[],foundAt:todayISO(),doneAt:'',_new:true};const qp=q&&q.get('plan');if(qp&&S.plans.some(x=>x.id===qp)){const x=parseFloat(q.get('x')),y=parseFloat(q.get('y'));if(x>=0&&x<=1&&y>=0&&y<=1){DRAFT.pin={planId:qp,page:parseInt(q.get('s'),10)||1,x,y};DRAFT._fromPlan=true}}}else{const d=S.defects.find(x=>x.id===did&&x.projectId===p.id);if(!d)return notFound();DRAFT=clone(d)}DRAFT._key=location.hash}
+ if(!DRAFT||DRAFT._key!==location.hash){if(did==='neu'){const nr=Math.max(0,...S.defects.filter(d=>d.projectId===p.id).map(d=>d.nr||0))+1;DRAFT={id:uid(),projectId:p.id,nr,title:'',desc:'',location:'',firma:'',deadline:addDays(todayISO(),14),status:'offen',photos:[],foundAt:todayISO(),doneAt:'',_new:true};const qp=q&&q.get('plan');if(qp&&S.plans.some(x=>x.id===qp)){const x=parseFloat(q.get('x')),y=parseFloat(q.get('y'));if(x>=0&&x<=1&&y>=0&&y<=1){DRAFT.pin={planId:qp,page:parseInt(q.get('s'),10)||1,x,y};DRAFT._fromPlan=true}}if(q&&q.get('bf')){DRAFT.baufeld=q.get('bf');DRAFT.reihe=q.get('reihe')||''}}else{const d=S.defects.find(x=>x.id===did&&x.projectId===p.id);if(!d)return notFound();DRAFT=clone(d)}DRAFT._key=location.hash}
  const d=DRAFT;setHeader(d._new?'Neuer Mangel':'Mangel #'+d.nr,`#/projekt/${p.id}/maengel`);const firms=firmsOf(p);
  return `<div class="mut sm" style="margin:0 2px 8px">${esc(p.name)} · Mangel-Nr. ${d.nr}</div>
  <div class="card"><h3>Fotos</h3>${photoField()}</div>
  <div class="card">${fld('Titel / Kurzbeschreibung *','title',{ph:'z. B. Riss in Innenwand'})}${fld('Beschreibung','desc',{type:'textarea'})}
- <div class="grid">${fld('Ort / Bauteil','location',{ph:'z. B. EG, Wohnzimmer, Nordwand',list:'locs'})}${fld('Verantwortliche Firma','firma',{list:'firms'})}${fld('Festgestellt am','foundAt',{type:'date'})}${fld('Frist','deadline',{type:'date'})}</div>
+ <div class="grid">${fld('Ort / Bauteil','location',{ph:'z. B. EG, Wohnzimmer, Nordwand',list:'locs'})}${fld('Baufeld','baufeld',{ph:'z. B. BF 12',list:'bfs'})}${fld('Reihe','reihe',{ph:'z. B. 7'})}${fld('Verantwortliche Firma','firma',{list:'firms'})}${fld('Festgestellt am','foundAt',{type:'date'})}${fld('Frist','deadline',{type:'date'})}</div>
  ${fld('Status','status',{type:'select',options:DSTAT})}${d.doneAt?`<div class="mut sm">Erledigt/abgenommen am ${fmtD(d.doneAt)}</div>`:''}
  <div class="btnrow">${[7,14,28].map(n=>`<button class="btn sm sec" onclick="App.setDeadline(${n})">Frist +${n} Tage</button>`).join('')}</div>
- ${datalist('firms',firms)}${datalist('locs',S.defects.filter(x=>x.projectId===p.id).map(x=>x.location))}</div>
+ ${datalist('firms',firms)}${datalist('locs',S.defects.filter(x=>x.projectId===p.id).map(x=>x.location))}${datalist('bfs',bfsOf(p.id))}</div>
  ${defectPlanCard(p,d)}
  <div class="actbar"><button class="btn" onclick="App.saveDefect()">Speichern</button>${d._new?`<button class="btn sec" onclick="App.saveDefect(true)">Speichern + Nächster</button>`:''}<button class="btn sec" onclick="history.back()">Abbrechen</button>${d._new?'':`<button class="btn dan" onclick="App.delDefect()">Löschen</button>`}</div>`}
 App.setDeadline=n=>{DRAFT.deadline=addDays(todayISO(),n);render()};
@@ -562,12 +573,12 @@ App.delProtocol=async()=>{if(!confirm('Protokoll löschen?'))return;const d=DRAF
 function tabReports(p){const t=todayISO();const prots=S.protocols.filter(x=>x.projectId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
  return `<div class="card"><h3>📒 Bautagebuch-Bericht</h3><div class="grid g2m"><label class="fld"><span>Von</span><input type="date" id="rv" value="${t}"></label><label class="fld"><span>Bis</span><input type="date" id="rb" value="${t}"></label></div>
  <div class="btnrow"><button class="btn" onclick="App.rptDiary('${p.id}')">Bericht erstellen</button><button class="btn sec" onclick="App.rptDiary('${p.id}','heute')">Heute</button><button class="btn sec" onclick="App.rptDiary('${p.id}','woche')">Diese Woche</button><button class="btn sec" onclick="App.rptDiary('${p.id}','monat')">Dieser Monat</button></div></div>
- <div class="card"><h3>⚠️ Mängelbericht / Mängelliste</h3><div class="grid g2m"><label class="fld"><span>Firma</span><select id="rf"><option value="">Alle Firmen</option>${firmsOf(p).map(f=>opt(f,'')).join('')}</select></label><label class="fld"><span>Status</span><select id="rs">${DFILTER.map(x=>opt(x,'aktiv')).join('')}</select></label></div>
+ <div class="card"><h3>⚠️ Mängelbericht / Mängelliste</h3><div class="grid g2m"><label class="fld"><span>Firma</span><select id="rf"><option value="">Alle Firmen</option>${firmsOf(p).map(f=>opt(f,'')).join('')}</select></label><label class="fld"><span>Status</span><select id="rs">${DFILTER.map(x=>opt(x,'aktiv')).join('')}</select></label>${bfsOf(p.id).length?`<label class="fld"><span>Baufeld</span><select id="rbf"><option value="">Alle Baufelder</option>${bfsOf(p.id).map(f=>opt(f,'')).join('')}</select></label><label class="fld"><span>Reihe</span><input id="rre" inputmode="numeric" placeholder="alle"></label>`:''}</div>
  <label class="cbl"><input type="checkbox" id="rp" checked> Mit Fotos und Beschreibung</label>${S.plans.some(x=>x.projectId===p.id)?'<label class="cbl"><input type="checkbox" id="rpl" checked> Mit Plänen (Mangel-Pins)</label>':''}<div class="btnrow"><button class="btn" onclick="App.rptDefects('${p.id}')">Mängelbericht erstellen</button></div></div>
  <div class="card"><h3>🗒️ Besprechungsprotokoll</h3>${prots.length?`<label class="fld"><span>Protokoll</span><select id="rpr">${prots.map(x=>opt([x.id,x.title+' – '+fmtD(x.date)],'')).join('')}</select></label><div class="btnrow"><button class="btn" onclick="go('#/bericht/protokoll?id='+$('#rpr').value)">Protokoll als PDF</button><button class="btn sec" onclick="go('#/projekt/${p.id}/protokoll/neu')">+ Neues Protokoll</button></div>`:`<p class="mut">Noch keine Protokolle.</p><div class="btnrow"><button class="btn sec" onclick="go('#/projekt/${p.id}/protokoll/neu')">+ Neues Protokoll</button></div>`}</div>
  <p class="mut sm">Im Bericht auf „Drucken / Als PDF speichern“ tippen und als Drucker „Als PDF speichern“ wählen (am iPhone: Teilen → Drucken → mit zwei Fingern aufziehen → Teilen).</p>`}
 App.rptDiary=(pid,preset)=>{let v=$('#rv').value,b=$('#rb').value;const t=todayISO();if(preset==='heute')v=b=t;if(preset==='woche'){const wd=(new Date(t+'T12:00:00').getDay()+6)%7;v=addDays(t,-wd);b=addDays(v,6)}if(preset==='monat'){v=t.slice(0,8)+'01';const d=new Date(t+'T12:00:00');b=isoDate(new Date(d.getFullYear(),d.getMonth()+1,0))}if(!v||!b)return toast('Bitte Zeitraum wählen');if(b<v)[v,b]=[b,v];go(`#/bericht/tagebuch?p=${pid}&von=${v}&bis=${b}`)};
-App.rptDefects=pid=>go(`#/bericht/maengel?p=${pid}&firma=${encodeURIComponent($('#rf').value)}&status=${encodeURIComponent($('#rs').value)}&fotos=${$('#rp').checked?1:0}&plaene=${$('#rpl')?.checked?1:0}`);
+App.rptDefects=pid=>go(`#/bericht/maengel?p=${pid}&firma=${encodeURIComponent($('#rf').value)}&status=${encodeURIComponent($('#rs').value)}&fotos=${$('#rp').checked?1:0}&plaene=${$('#rpl')?.checked?1:0}&bf=${encodeURIComponent($('#rbf')?.value||'')}&reihe=${encodeURIComponent(($('#rre')?.value||'').trim())}`);
 /* ================= Berichte (A4 / PDF) ================= */
 function rptHead(title,sub,p){const st=S.settings;
  return `<div class="r-head"><div class="r-firm">${st.logo?`<img class="r-logo" src="${st.logo}" alt="Logo">`:''}${st.company?`<b style="font-size:10.5pt">${esc(st.company)}</b><br>`:''}${st.address?esc(st.address).replace(/\n/g,'<br>')+'<br>':''}${[st.phone,st.email].filter(Boolean).map(esc).join(' · ')}</div><div class="r-title"><h1>${esc(title)}</h1><div>${sub}</div></div></div>
@@ -586,13 +597,13 @@ function viewReport(type,q){
   <div class="r-block"><h4>Besondere Vorkommnisse</h4><div class="r-text">${esc(e.incidents)||'keine'}</div></div>
   <div class="r-block"><h4>Behinderungen / Bedenken</h4><div class="r-text">${esc(e.hindrances)||'keine'}</div></div>
   ${e.photos?.length?`<h4>Fotodokumentation</h4>${rptPhotos(e.photos,fmtD(e.date)+' – ')}`:''}</section>`}).join(''):`<p><i>Im gewählten Zeitraum gibt es keine Tagebucheinträge.</i></p>`)+rptSign();
- }else if(type==='maengel'){p=proj(q.get('p'));if(!p)return notFound();back=`#/projekt/${p.id}/maengel`;const st=q.get('status')||'aktiv',firma=q.get('firma')||'',fotos=q.get('fotos')==='1',withPlans=q.get('plaene')==='1';
-  const l=filterDefects(S.defects.filter(d=>d.projectId===p.id),st,firma).sort((a,b)=>a.nr-b.nr);const stl=(DFILTER.find(x=>x[0]===st)||[st,st])[1];
+ }else if(type==='maengel'){p=proj(q.get('p'));if(!p)return notFound();back=`#/projekt/${p.id}/maengel`;const st=q.get('status')||'aktiv',firma=q.get('firma')||'',fotos=q.get('fotos')==='1',withPlans=q.get('plaene')==='1',bf=q.get('bf')||'',reihe=q.get('reihe')||'';
+  const l=filterDefects(S.defects.filter(d=>d.projectId===p.id),st,firma,bf,reihe).sort((a,b)=>a.nr-b.nr);const stl=(DFILTER.find(x=>x[0]===st)||[st,st])[1];
   title=fotos?'Mängelbericht':'Mängelliste';const cnt=s=>l.filter(d=>d.status===s).length;
-  html=rptHead(title,`Stand: ${fmtD(todayISO())}<br>Filter: ${esc(stl)}${firma?' · '+esc(firma):''}`,p)+
+  html=rptHead(title,`Stand: ${fmtD(todayISO())}<br>Filter: ${esc(stl)}${firma?' · '+esc(firma):''}${bf?' · '+esc(bf):''}${reihe?' · Reihe '+esc(reihe):''}`,p)+
   `<div class="r-summary"><b>${l.length} Mängel</b>${DSTAT.map(s=>`<span>${s}: ${cnt(s)}</span>`).join('')}<span class="r-over">überfällig: ${l.filter(isOverdue).length}</span></div>
-  ${l.length?`<table><tr><th style="width:6%">Nr.</th><th>Mangel</th><th style="width:20%">Ort / Bauteil</th><th style="width:19%">Firma</th><th style="width:11%">Frist</th><th style="width:11%">Status</th></tr>${l.map(d=>`<tr><td>${d.nr}</td><td>${esc(d.title)}</td><td>${esc(d.location)}</td><td>${esc(d.firma)}</td><td class="${isOverdue(d)?'r-over':''}">${fmtD(d.deadline)}${isOverdue(d)?'<br>überfällig':''}</td><td>${esc(d.status)}${d.doneAt?'<br><small>'+fmtD(d.doneAt)+'</small>':''}</td></tr>`).join('')}</table>`:'<p><i>Keine Mängel für diesen Filter.</i></p>'}
-  ${fotos&&l.length?`<h2>Einzelaufstellung</h2>${l.map(d=>`<div class="r-defect"><b>Nr. ${d.nr}: ${esc(d.title)}</b> — ${esc(d.status)}<br><small>Ort: ${esc(d.location||'–')} · Firma: ${esc(d.firma||'–')} · festgestellt: ${fmtD(d.foundAt)||'–'} · Frist: <span class="${isOverdue(d)?'r-over':''}">${fmtD(d.deadline)||'–'}</span></small>${d.desc?`<div style="white-space:pre-wrap;margin-top:4px">${esc(d.desc)}</div>`:''}${withPlans&&d.pin?planSnip(d,'psnip r-snip'):''}${rptPhotos(d.photos,'Mangel '+d.nr+' – ')}</div>`).join('')}`:''}${withPlans?rptPlans(l):''}
+  ${l.length?`<table><tr><th style="width:6%">Nr.</th><th>Mangel</th><th style="width:20%">Ort / Bauteil</th><th style="width:19%">Firma</th><th style="width:11%">Frist</th><th style="width:11%">Status</th></tr>${l.map(d=>`<tr><td>${d.nr}</td><td>${esc(d.title)}</td><td>${esc(d.location)}${bfr(d)?`${d.location?'<br>':''}<small>${esc(bfr(d))}</small>`:''}</td><td>${esc(d.firma)}</td><td class="${isOverdue(d)?'r-over':''}">${fmtD(d.deadline)}${isOverdue(d)?'<br>überfällig':''}</td><td>${esc(d.status)}${d.doneAt?'<br><small>'+fmtD(d.doneAt)+'</small>':''}</td></tr>`).join('')}</table>`:'<p><i>Keine Mängel für diesen Filter.</i></p>'}
+  ${fotos&&l.length?`<h2>Einzelaufstellung</h2>${l.map(d=>`<div class="r-defect"><b>Nr. ${d.nr}: ${esc(d.title)}</b> — ${esc(d.status)}<br><small>${bfr(d)?esc(bfr(d))+' · ':''}Ort: ${esc(d.location||'–')} · Firma: ${esc(d.firma||'–')} · festgestellt: ${fmtD(d.foundAt)||'–'} · Frist: <span class="${isOverdue(d)?'r-over':''}">${fmtD(d.deadline)||'–'}</span></small>${d.desc?`<div style="white-space:pre-wrap;margin-top:4px">${esc(d.desc)}</div>`:''}${withPlans&&d.pin?planSnip(d,'psnip r-snip'):''}${rptPhotos(d.photos,'Mangel '+d.nr+' – ')}</div>`).join('')}`:''}${withPlans?rptPlans(l):''}
   <p class="r-note">Wir bitten um Beseitigung der aufgeführten Mängel bis zur jeweils genannten Frist und um schriftliche Fertigmeldung.</p>`+rptSign('Ort, Datum','Unterschrift Bauleitung');
  }else if(type==='protokoll'){const x=S.protocols.find(y=>y.id===q.get('id'));if(!x)return notFound();p=proj(x.projectId);if(!p)return notFound();back=`#/projekt/${p.id}/protokoll/${x.id}`;title='Besprechungsprotokoll';
   html=rptHead(title,`${esc(x.title)}<br>${weekday(x.date)}, ${fmtD(x.date)}${x.time?', '+esc(x.time)+' Uhr':''}`,p)+
@@ -619,7 +630,7 @@ let PF='',MBUSY=false,PV=null,PIN_TMP=null,pdfLibP=null;
 function tabPlans(p){const all=plansOf(p.id);const cats=[...new Set(all.map(x=>x.category).filter(Boolean))];if(PF&&!cats.includes(PF))PF='';const l=PF?all.filter(x=>x.category===PF):all;const tot=all.reduce((s,x)=>s+(x.bytes||0),0);
  return `<div class="btnrow" style="margin:0 0 12px"><button class="btn" onclick="App.planUpload('${p.id}','file')">📄 PDF / Datei hochladen</button><button class="btn sec" onclick="App.planUpload('${p.id}','cam')">📷 Plan fotografieren</button><button class="btn sec" onclick="App.planUpload('${p.id}','gal')">🖼️ Aus Galerie</button></div>
  ${cats.length>1?`<div class="chips"><button class="${!PF?'on':''}" onclick="App.pf('')">Alle</button>${cats.map(c=>`<button class="${PF===c?'on':''}" onclick="App.pf(${esc(JSON.stringify(c))})">${esc(c)}</button>`).join('')}</div>`:''}
- <div class="list">${l.map(x=>{const pins=S.defects.filter(d=>d.pin&&d.pin.planId===x.id);const op=pins.filter(d=>ACTIVE_D.includes(d.status)).length;return `<a class="row" href="#/projekt/${p.id}/plan/${x.id}">${x.thumb?`<img class="pthumb" src="${x.thumb}" alt="">`:'<div class="pthumb"></div>'}<div class="grow"><div class="rt ell">${esc(x.name||'(ohne Namen)')}</div><div class="mut sm ell">${[x.number&&'Nr. '+x.number,x.revision&&'Index '+x.revision,x.date&&fmtD(x.date)].filter(Boolean).map(esc).join(' · ')||'&nbsp;'}</div><div class="sm mut">${x.category?`<span class="tag">${esc(x.category)}</span> `:''}${x.pages.length} Seite${x.pages.length>1?'n':''} · ${fmtMB(x.bytes||0)}${pins.length?` · 📍 ${pins.length}${op?` (<span class="over">${op} offen</span>)`:''}`:''}</div></div></a>`}).join('')||'<div class="empty">Noch keine Pläne. Lade einen PDF-Plan hoch oder fotografiere einen Plan.</div>'}</div>
+ <div class="list">${l.map(x=>{const pins=S.defects.filter(d=>d.pin&&d.pin.planId===x.id);const op=pins.filter(d=>ACTIVE_D.includes(d.status)).length;return `<a class="row" href="#/projekt/${p.id}/plan/${x.id}">${x.thumb?`<img class="pthumb" src="${x.thumb}" alt="">`:'<div class="pthumb"></div>'}<div class="grow"><div class="rt ell">${esc(x.name||'(ohne Namen)')}</div><div class="mut sm ell">${[x.number&&'Nr. '+x.number,x.revision&&'Index '+x.revision,x.date&&fmtD(x.date)].filter(Boolean).map(esc).join(' · ')||'&nbsp;'}</div><div class="sm mut">${x.category?`<span class="tag">${esc(x.category)}</span> `:''}${x.pages.length} Seite${x.pages.length>1?'n':''} · ${fmtMB(x.bytes||0)}${(()=>{const n=S.annots.filter(a=>a.planId===x.id);const r=n.filter(a=>a.type==='row').length;return (n.length-r?` · ✏️ ${n.length-r}`:'')+(r?` · 🔢 ${r}`:'')})()}${pins.length?` · 📍 ${pins.length}${op?` (<span class="over">${op} offen</span>)`:''}`:''}</div></div></a>`}).join('')||'<div class="empty">Noch keine Pläne. Lade einen PDF-Plan hoch oder fotografiere einen Plan.</div>'}</div>
  <p class="sm mut">💾 ${all.length} Plan${all.length===1?'':'e'} · ca. ${fmtMB(tot)} auf diesem Gerät. Pläne werden offline als Bilder gespeichert: PDF-Seiten werden beim Hochladen in Bilder umgewandelt, das Original-PDF selbst wird nicht gespeichert. Große PDFs (A1/A0, viele Seiten) belegen ca. 0,5–2 MB pro Seite und vergrößern die Sicherungsdatei entsprechend – nur benötigte Pläne hochladen und regelmäßig sichern. Pläne sind nur auf diesem Gerät, bis sie per Sicherung übertragen werden.</p>`}
 App.pf=c=>{PF=c;render()};
 App.planUpload=(pid,src)=>{const inp=src==='cam'?$('#fileCam'):src==='gal'?$('#fileGal'):$('#fileAny');if(src==='file')inp.accept='application/pdf,.pdf,image/*';inp.value='';inp.onchange=async()=>{const f=inp.files[0];if(!f)return;await planFromFile(pid,f)};inp.click()};
@@ -651,16 +662,57 @@ function planMetaModal(){const ex=!MD._new;
 App.planEdit=id=>{const x=S.plans.find(p=>p.id===id);if(!x)return;MD=clone(x);planMetaModal()};
 App.planSave=async()=>{if(!(MD.name||'').trim())return toast('Bitte einen Plannamen eingeben');const isNew=!!MD._new;const o=clean(MD);o.name=o.name.trim();await save('plans',o);MD=null;App.closeModal();toast('Plan gespeichert');if(isNew)go(`#/projekt/${o.projectId}/plan/${o.id}`);else render()};
 App.planDel=async id=>{const x=S.plans.find(p=>p.id===id);if(!x)return;const pins=S.defects.filter(d=>d.pin&&d.pin.planId===id);if(!confirm(`Plan „${x.name}“ löschen?${pins.length?`\n${pins.length} Mangel-Pin(s) werden vom Plan entfernt (die Mängel selbst bleiben erhalten).`:''}`))return;
- for(const d of pins){delete d.pin;await save('defects',d)}for(const pg of x.pages){await dbDel('photos',pg.photo);photoCache.delete(pg.photo)}await dbDel('plans',id);S.plans=S.plans.filter(p=>p.id!==id);MD=null;App.closeModal();toast('Plan gelöscht');go(`#/projekt/${x.projectId}/plaene`)};
-async function delPlansOfProject(pid){for(const x of S.plans.filter(x=>x.projectId===pid)){for(const pg of x.pages){await dbDel('photos',pg.photo);photoCache.delete(pg.photo)}await dbDel('plans',x.id)}S.plans=S.plans.filter(x=>x.projectId!==pid)}
-/* ---- Plan-Ansicht mit Zoom und Pins ---- */
+ for(const d of pins){delete d.pin;await save('defects',d)}for(const a of S.annots.filter(a=>a.planId===id))await remove('annots',a.id);for(const pg of x.pages){await dbDel('photos',pg.photo);photoCache.delete(pg.photo)}await dbDel('plans',id);S.plans=S.plans.filter(p=>p.id!==id);MD=null;App.closeModal();toast('Plan gelöscht');go(`#/projekt/${x.projectId}/plaene`)};
+async function delPlansOfProject(pid){for(const a of S.annots.filter(a=>a.projectId===pid))await remove('annots',a.id);for(const x of S.plans.filter(x=>x.projectId===pid)){for(const pg of x.pages){await dbDel('photos',pg.photo);photoCache.delete(pg.photo)}await dbDel('plans',x.id)}S.plans=S.plans.filter(x=>x.projectId!==pid)}
+/* ---- Plan-Ansicht mit Zoom, Pins, Zeichnungen und Reihenbeschriftung ---- */
+const ACOLS=['#e53935','#1e88e5','#43a047','#fb8c00','#8e24aa','#111111'];
+const AWS=[2,4,8];
+let DRAW={tool:'pen',color:'#e53935',w:4,ts:20};
+let ROWC={bf:'',prefix:'R',start:1,step:1,size:'M',rot:0,next:null};
+const RSIZE={S:0.004,M:0.006,L:0.009};
+const MODEQ={pin:'pin',draw:'zeichnen',rows:'reihen'};
+const annsOf=(plid,pg)=>S.annots.filter(a=>a.planId===plid&&(a.page||1)===pg).sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||'')||(a.id<b.id?-1:1));
+const natSort=(a,b)=>String(a).localeCompare(String(b),'de',{numeric:true});
+const bfsOf=pid=>[...new Set([...S.annots.filter(a=>a.type==='row'&&a.projectId===pid).map(a=>a.baufeld),...S.defects.filter(d=>d.projectId===pid).map(d=>d.baufeld)].filter(Boolean))].sort(natSort);
+const bfr=d=>[d.baufeld,d.reihe!==''&&d.reihe!=null?'Reihe '+d.reihe:''].filter(Boolean).join(' · ');
+function bfFromPlan(pl){const m=((pl.name||'')+' '+(pl.category||'')+' '+(pl.notes||'')).match(/\b(?:BF|Baufeld)\s*[-_]?\s*(\d+)/i);return m?'BF '+m[1]:''}
+const f1=n=>(+n).toFixed(1);
+function annEl(a,W,H){const P=a.pts||[];if(!P.length)return '';const X=v=>f1(v*W),Y=v=>f1(v*H);const swn=(a.w||0.002)*W,sw=f1(swn);const c=esc(a.color||'#e53935');
+ switch(a.type){
+ case 'pen':case 'hl':return `<polyline points="${P.map(p=>X(p[0])+','+Y(p[1])).join(' ')}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"${a.type==='hl'?' stroke-opacity="0.38"':''}/>`;
+ case 'arrow':{if(P.length<2)return '';const x1=P[0][0]*W,y1=P[0][1]*H,x2=P[1][0]*W,y2=P[1][1]*H;const an=Math.atan2(y2-y1,x2-x1);const L=Math.max(swn*4.5,8),q=L*0.55;const hx=x2-L*Math.cos(an),hy=y2-L*Math.sin(an),a1=an+Math.PI/2;
+  return `<line x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(hx)}" y2="${f1(hy)}" stroke="${c}" stroke-width="${sw}" stroke-linecap="round"/><polygon points="${f1(x2)},${f1(y2)} ${f1(hx+q*Math.cos(a1))},${f1(hy+q*Math.sin(a1))} ${f1(hx-q*Math.cos(a1))},${f1(hy-q*Math.sin(a1))}" fill="${c}"/>`}
+ case 'rect':case 'circle':{if(P.length<2)return '';const x=Math.min(P[0][0],P[1][0])*W,y=Math.min(P[0][1],P[1][1])*H,w=Math.abs(P[1][0]-P[0][0])*W,h=Math.abs(P[1][1]-P[0][1])*H;
+  return a.type==='rect'?`<rect x="${f1(x)}" y="${f1(y)}" width="${f1(w)}" height="${f1(h)}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-linejoin="round"/>`:`<ellipse cx="${f1(x+w/2)}" cy="${f1(y+h/2)}" rx="${f1(w/2)}" ry="${f1(h/2)}" fill="none" stroke="${c}" stroke-width="${sw}"/>`}
+ case 'text':{const fs=(a.size||0.006)*W;return `<text x="${X(P[0][0])}" y="${Y(P[0][1])}" font-size="${f1(fs)}" font-weight="700" font-family="system-ui,Arial,sans-serif" fill="${c}" stroke="#fff" stroke-width="${f1(fs*0.18)}" paint-order="stroke" stroke-linejoin="round">${esc(a.text)}</text>`}
+ case 'row':{const fs=(a.size||0.006)*W;const t=(a.prefix||'')+a.num;const bw=fs*(0.62*t.length+0.9),bh=fs*1.45;
+  return `<g transform="translate(${X(P[0][0])} ${Y(P[0][1])}) rotate(${+a.rot||0})"><rect x="${f1(-bw/2)}" y="${f1(-bh/2)}" width="${f1(bw)}" height="${f1(bh)}" rx="${f1(fs*0.3)}" fill="#0d47a1" stroke="#fff" stroke-width="${f1(fs*0.12)}"/><text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="${f1(fs)}" font-weight="700" font-family="system-ui,Arial,sans-serif" fill="#fff">${esc(t)}</text></g>`}}
+ return ''}
+function annBox(a,W,H){const P=a.pts||[];if(a.type==='text'){const fs=(a.size||0.006)*W;return {x:P[0][0]*W,y:P[0][1]*H-fs,w:String(a.text||'').length*fs*0.62,h:fs*1.3}}
+ if(a.type==='row'){const fs=(a.size||0.006)*W;const t=(a.prefix||'')+a.num;let bw=fs*(0.62*t.length+0.9),bh=fs*1.45;if(+a.rot){const m=Math.max(bw,bh);bw=bh=m}return {x:P[0][0]*W-bw/2,y:P[0][1]*H-bh/2,w:bw,h:bh}}
+ const xs=P.map(p=>p[0]*W),ys=P.map(p=>p[1]*H);const sw=(a.w||0.002)*W/2;const x=Math.min(...xs)-sw,y=Math.min(...ys)-sw;return {x,y,w:Math.max(...xs)+sw-x,h:Math.max(...ys)+sw-y}}
+function distSeg(px,py,x1,y1,x2,y2){const dx=x2-x1,dy=y2-y1;const l=dx*dx+dy*dy;let t=l?((px-x1)*dx+(py-y1)*dy)/l:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-x1-t*dx,py-y1-t*dy)}
+function annHit(px,py,tol,types){const v=PV;const l=annsOf(v.pl.id,v.pg).filter(a=>!types||types.includes(a.type));const order=[...l.filter(a=>a.type!=='row'),...l.filter(a=>a.type==='row')].reverse();
+ for(const a of order){if(['pen','hl','arrow'].includes(a.type)){const P=a.pts.map(p=>[p[0]*v.w,p[1]*v.h]);const lim=tol+(a.w||0.002)*v.w/2;if(P.length===1&&Math.hypot(px-P[0][0],py-P[0][1])<=lim)return a;for(let i=1;i<P.length;i++)if(distSeg(px,py,P[i-1][0],P[i-1][1],P[i][0],P[i][1])<=lim)return a}
+  else{const b=annBox(a,v.w,v.h);if(px>=b.x-tol&&px<=b.x+b.w+tol&&py>=b.y-tol&&py<=b.y+b.h+tol)return a}}return null}
+function annSvg(plid,pg,W,H,selId){const l=annsOf(plid,pg);if(!l.length)return '';let sel='';const s=selId&&l.find(a=>a.id===selId);
+ if(s){const b=annBox(s,W,H),k=PV?1/PV.s:1,pd=6*k;sel=`<rect x="${f1(b.x-pd)}" y="${f1(b.y-pd)}" width="${f1(b.w+2*pd)}" height="${f1(b.h+2*pd)}" fill="none" stroke="#ffb300" stroke-width="${f1(2.5*k)}" stroke-dasharray="${f1(8*k)} ${f1(5*k)}"/>`}
+ return `<svg class="ann" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">${l.filter(a=>a.type!=='row').map(a=>annEl(a,W,H)).join('')}${l.filter(a=>a.type==='row').map(a=>annEl(a,W,H)).join('')}${sel}</svg>`}
 function viewPlan(p,plid,q){const pl=S.plans.find(x=>x.id===plid&&x.projectId===p.id);if(!pl)return notFound();
- const n=pl.pages.length,pg=Math.min(Math.max(1,parseInt(q.get('s'),10)||1),n);const mode=q.get('modus')||'';const assign=mode==='verorten'?(q.get('d')||''):'';
+ const n=pl.pages.length,pg=Math.min(Math.max(1,parseInt(q.get('s'),10)||1),n);const mq=q.get('modus')||'';const assign=mq==='verorten'?(q.get('d')||''):'';
+ const mode=assign||mq==='pin'?'pin':mq==='zeichnen'?'draw':mq==='reihen'?'rows':'';
  setHeader(pl.name,`#/projekt/${p.id}/plaene`,`<button class="hbtn" onclick="App.planEdit('${pl.id}')">Details</button>`);
- afterRender=()=>pvInit(pl,pg,{focus:q.get('f')||'',assign,pin:mode==='pin'||!!assign});
- return `<div class="pvbar">${n>1?`<button class="btn sm sec" onclick="App.pvPage(-1)" ${pg<=1?'disabled':''} aria-label="Vorherige Seite">‹</button><select class="pvsel" onchange="App.pvPage(0,this.value)" aria-label="Seite">${pl.pages.map((_,i)=>`<option value="${i+1}" ${i+1===pg?'selected':''}>Seite ${i+1} / ${n}</option>`).join('')}</select><button class="btn sm sec" onclick="App.pvPage(1)" ${pg>=n?'disabled':''} aria-label="Nächste Seite">›</button>`:''}<button class="btn sm sec" id="pvPinBtn" onclick="App.pvPinMode()">📍 Mangel setzen</button><button class="btn sm sec" onclick="App.pvZoom(1.6)" aria-label="Vergrößern">＋</button><button class="btn sm sec" onclick="App.pvZoom(1/1.6)" aria-label="Verkleinern">－</button><button class="btn sm sec" onclick="App.pvFit()">⤢ Ganz</button></div>
+ afterRender=()=>pvInit(pl,pg,{focus:q.get('f')||'',assign,mode});
+ const bfs=bfsOf(p.id);
+ return `<div class="pvbar">${n>1?`<button class="btn sm sec" onclick="App.pvPage(-1)" ${pg<=1?'disabled':''} aria-label="Vorherige Seite">‹</button><select class="pvsel" onchange="App.pvPage(0,this.value)" aria-label="Seite">${pl.pages.map((_,i)=>`<option value="${i+1}" ${i+1===pg?'selected':''}>Seite ${i+1} / ${n}</option>`).join('')}</select><button class="btn sm sec" onclick="App.pvPage(1)" ${pg>=n?'disabled':''} aria-label="Nächste Seite">›</button>`:''}<button class="btn sm sec" id="pvPinBtn" onclick="App.pvMode('pin')">📍 Mangel</button><button class="btn sm sec" id="pvDrawBtn" onclick="App.pvMode('draw')">✏️ Zeichnen</button><button class="btn sm sec" id="pvRowBtn" onclick="App.pvMode('rows')">🔢 Reihen</button><button class="btn sm sec" onclick="App.pvZoom(1.6)" aria-label="Vergrößern">＋</button><button class="btn sm sec" onclick="App.pvZoom(1/1.6)" aria-label="Verkleinern">－</button><button class="btn sm sec" onclick="App.pvFit()">⤢ Ganz</button></div>
+ <div class="pvtools hidden" id="pvTools"><div class="tgrp">${[['pan','✋','Verschieben'],['select','⬚','Auswählen / verschieben'],['pen','✏️','Stift'],['hl','🖍️','Marker'],['arrow','➚','Pfeil'],['circle','◯','Kreis'],['rect','▭','Rechteck'],['text','T','Text']].map(([k,i,l])=>`<button class="tbtn" data-tool="${k}" onclick="App.drTool('${k}')" title="${l}" aria-label="${l}">${i}</button>`).join('')}</div>
+  <div class="tgrp">${ACOLS.map(c=>`<button class="cbtn" data-col="${c}" style="background:${c}" onclick="App.drCol('${c}')" aria-label="Farbe ${c}"></button>`).join('')}</div>
+  <div class="tgrp">${AWS.map((w,i)=>`<button class="tbtn" data-w="${w}" onclick="App.drW(${w})" title="Strich ${['dünn','mittel','dick'][i]}" aria-label="Strich ${['dünn','mittel','dick'][i]}"><i class="wdot" style="width:${w+4}px;height:${w+4}px"></i></button>`).join('')}</div>
+  <div class="tgrp"><button class="tbtn bUndo" onclick="App.pvUndo()" title="Rückgängig" aria-label="Rückgängig">↶</button><button class="tbtn bRedo" onclick="App.pvRedo()" title="Wiederholen" aria-label="Wiederholen">↷</button><button class="tbtn" id="bDel" onclick="App.annDelSel()" title="Auswahl löschen" aria-label="Auswahl löschen">🗑</button><button class="tbtn hidden" id="bTxt" onclick="App.annEditText()" title="Text ändern" aria-label="Text ändern">✎</button></div></div>
+ <div class="pvtools hidden" id="pvRows"><div class="rgrid"><label>Baufeld<input id="rBf" list="bflist" oninput="App.rowCfg('bf',this.value)" placeholder="z. B. BF 12"></label><label>Präfix<input id="rPre" oninput="App.rowCfg('prefix',this.value)" placeholder="z. B. R"></label><label>Start<input id="rStart" type="number" inputmode="numeric" onchange="App.rowCfg('start',this.value)"></label><label>Schritt<input id="rStep" type="number" inputmode="numeric" onchange="App.rowCfg('step',this.value)"></label><label>Größe<select id="rSize" onchange="App.rowCfg('size',this.value)">${[['S','klein'],['M','mittel'],['L','groß']].map(x=>opt(x,'')).join('')}</select></label><label>Drehung<select id="rRot" onchange="App.rowCfg('rot',this.value)">${[['0','waagerecht'],['-90','senkrecht ↑'],['90','senkrecht ↓'],['-45','schräg ↗'],['45','schräg ↘']].map(x=>opt(x,'')).join('')}</select></label></div>
+  <div class="tgrp"><span class="sm">Nächste Beschriftung: <b id="rowNext">–</b></span><button class="tbtn bUndo" onclick="App.pvUndo()" title="Rückgängig" aria-label="Rückgängig">↶</button><button class="tbtn bRedo" onclick="App.pvRedo()" title="Wiederholen" aria-label="Wiederholen">↷</button></div>${datalist('bflist',bfs)}</div>
  <div class="hint hidden" id="pvHint"></div>
- <div class="pvstage" id="pvStage"><div class="pvcont" id="pvCont"><img id="pvImg" data-photo="${pl.pages[pg-1].photo}" alt="Plan" draggable="false"><div id="pvPins"></div></div></div>
+ <div class="pvstage" id="pvStage"><div class="pvcont" id="pvCont"><img id="pvImg" data-photo="${pl.pages[pg-1].photo}" alt="Plan" draggable="false"><div class="annwrap" id="pvAnn"></div><div class="annwrap" id="pvTmp"></div><div id="pvPins"></div></div></div>
  <div class="sm mut" style="margin:6px 2px">${[pl.number&&'Plan-Nr. '+pl.number,pl.revision&&'Index '+pl.revision,pl.date&&fmtD(pl.date),pl.category].filter(Boolean).map(esc).join(' · ')}${pl.number||pl.revision||pl.date||pl.category?' · ':''}Zoomen: zwei Finger / Mausrad · Verschieben: ziehen</div>${pinLegend()}
  <div id="pvList"></div>`}
 function pvApply(){const v=PV;if(!v)return;v.ct.style.transform=`translate(${v.tx}px,${v.ty}px) scale(${v.s})`;v.ct.style.setProperty('--is',(1/v.s).toFixed(5))}
@@ -669,50 +721,124 @@ function pvFit(){const v=PV;const r=v.st.getBoundingClientRect();v.s=pvFitScale(
 function pvZoomAt(f,cx,cy){const v=PV;const fit=pvFitScale();const ns=Math.min(Math.max(v.s*f,fit*0.5),Math.max(4,fit));const k=ns/v.s;v.tx=cx-(cx-v.tx)*k;v.ty=cy-(cy-v.ty)*k;v.s=ns;pvApply()}
 function pvInit(pl,pg,o){const st=$('#pvStage'),ct=$('#pvCont'),img=$('#pvImg');if(!st)return;const P=pl.pages[pg-1];const w=P.w||img.naturalWidth||1000,h=P.h||img.naturalHeight||700;
  ct.style.width=w+'px';ct.style.height=h+'px';
- const v=PV={pl,pg,w,h,s:1,tx:0,ty:0,pin:o.pin,assign:o.assign,focus:o.focus,pts:new Map(),st,ct,down:null,pinch:null};
- pvFit();pvModeUI();pvPins();const fd=o.focus&&S.defects.find(d=>d.id===o.focus&&d.pin&&d.pin.planId===pl.id);if(fd)pvFocusOn(fd);
+ const v=PV={pl,pg,w,h,s:1,tx:0,ty:0,mode:o.mode||'',assign:o.assign,focus:o.focus,pts:new Map(),st,ct,down:null,pinch:null,act:null,sel:'',undo:[],redo:[],txtAt:null};
+ if(v.mode==='rows')rowsEnter();
+ pvFit();pvModeUI();pvPins();pvAnn();const fd=o.focus&&S.defects.find(d=>d.id===o.focus&&d.pin&&d.pin.planId===pl.id);if(fd)pvFocusOn(fd);
  const loc=e=>{const r=st.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}};
  const pinchState=()=>{const [a,b]=[...v.pts.values()];return {d:Math.hypot(a.x-b.x,a.y-b.y)||1,mx:(a.x+b.x)/2,my:(a.y+b.y)/2,s:v.s,tx:v.tx,ty:v.ty}};
  st.addEventListener('wheel',e=>{e.preventDefault();const p=loc(e);pvZoomAt(Math.exp(-e.deltaY*(e.deltaMode?0.05:0.0016)),p.x,p.y)},{passive:false});
- st.addEventListener('dblclick',e=>{if(v.pin)return;const p=loc(e);pvZoomAt(2,p.x,p.y)});
- st.addEventListener('pointerdown',e=>{if(e.button>0)return;const p=loc(e);v.pts.set(e.pointerId,p);if(v.pts.size===1){const pe=e.target.closest&&e.target.closest('.pin');v.down={x:p.x,y:p.y,t:Date.now(),pin:pe?pe.dataset.id:'',moved:false}}else{if(v.down)v.down.moved=true;v.pinch=pinchState()}try{st.setPointerCapture(e.pointerId)}catch(_){}});
+ st.addEventListener('dblclick',e=>{if(v.mode)return;const p=loc(e);pvZoomAt(2,p.x,p.y)});
+ st.addEventListener('pointerdown',e=>{if(e.button>0)return;const p=loc(e);v.pts.set(e.pointerId,p);
+  if(v.pts.size===1){const pe=e.target.closest&&e.target.closest('.pin');v.down={x:p.x,y:p.y,t:Date.now(),pin:pe?pe.dataset.id:'',moved:false};v.act=(v.mode==='draw'||v.mode==='rows')&&!pe?actStart(p):null}
+  else{if(v.act){actCancel(v.act);v.act=null}if(v.down)v.down.moved=true;v.pinch=pinchState()}
+  try{st.setPointerCapture(e.pointerId)}catch(_){}});
  st.addEventListener('pointermove',e=>{const old=v.pts.get(e.pointerId);if(!old)return;const p=loc(e);v.pts.set(e.pointerId,p);
   if(v.pts.size>=2&&v.pinch){const c=pinchState(),s0=v.pinch;const fit=pvFitScale();const ns=Math.min(Math.max(s0.s*c.d/s0.d,fit*0.5),Math.max(4,fit));const k=ns/s0.s;v.s=ns;v.tx=c.mx-(s0.mx-s0.tx)*k;v.ty=c.my-(s0.my-s0.ty)*k;pvApply()}
-  else if(v.pts.size===1){if(v.down&&!v.down.moved&&Math.hypot(p.x-v.down.x,p.y-v.down.y)>8)v.down.moved=true;if(!v.down||v.down.moved){v.tx+=p.x-old.x;v.ty+=p.y-old.y;pvApply()}}});
+  else if(v.pts.size===1){if(v.down&&!v.down.moved&&Math.hypot(p.x-v.down.x,p.y-v.down.y)>8)v.down.moved=true;
+   if(v.act)actMove(p);else if(!v.down||v.down.moved){v.tx+=p.x-old.x;v.ty+=p.y-old.y;pvApply()}}});
  const up=e=>{if(!v.pts.has(e.pointerId))return;v.pts.delete(e.pointerId);if(v.pts.size<2)v.pinch=null;if(v.pts.size>=2)v.pinch=pinchState();
-  if(v.pts.size===0&&v.down){const d=v.down;v.down=null;if(e.type==='pointerup'&&!d.moved&&Date.now()-d.t<700)pvTap(e,d.pin)}};
+  if(v.pts.size===0&&v.down){const d=v.down;v.down=null;const act=v.act;v.act=null;const isTap=e.type==='pointerup'&&!d.moved&&Date.now()-d.t<700;
+   if(act){if(e.type!=='pointerup'){actCancel(act);return}if(act.k==='move'&&act.tap&&!act.moved&&isTap)return rowPopup(act.o.id);actEnd(act);if(act.k!=='none')return}
+   if(isTap)pvTap(e,d.pin)}};
  st.addEventListener('pointerup',up);st.addEventListener('pointercancel',up);
- st.addEventListener('touchend',e=>{if(e.cancelable)e.preventDefault()},{passive:false}); /* verhindert Geister-Klicks nach dem Antippen (Dialog öffnet sich sonst und erhält den Klick) */
+ st.addEventListener('touchend',e=>{if(e.cancelable)e.preventDefault()},{passive:false}); /* verhindert Geister-Klicks nach dem Antippen */
  if(!window.__pvResize){window.__pvResize=true;let t;window.addEventListener('resize',()=>{clearTimeout(t);t=setTimeout(()=>{if(PV&&document.body.contains(PV.st))pvFit()},150)})}}
+const toPage=p=>({x:(p.x-PV.tx)/PV.s,y:(p.y-PV.ty)/PV.s});
+const relPt=q=>[+(q.x/PV.w).toFixed(5),+(q.y/PV.h).toFixed(5)];
+function actStart(p){const v=PV;const q=toPage(p);const tol=12/v.s;
+ if(v.mode==='rows'){const h=annHit(q.x,q.y,tol,['row']);return h?{k:'move',o:h,b:clone(h),start:q,moved:false,tap:true}:null}
+ const t=DRAW.tool;if(t==='pan'||t==='text')return null;
+ if(t==='select'){const h=annHit(q.x,q.y,tol);v.sel=h?h.id:'';pvAnn();pvUndoUI();return h?{k:'move',o:h,b:clone(h),start:q,moved:false}:null}
+ const r=relPt(q);const o={id:'an_'+uid(),projectId:v.pl.projectId,planId:v.pl.id,page:v.pg,type:t,color:DRAW.color,w:+((t==='hl'?DRAW.w*4:DRAW.w)/v.s/v.w).toFixed(6),pts:[r]};
+ if(t!=='pen'&&t!=='hl')o.pts.push(r.slice());return {k:'shape',o}}
+function actMove(p){const v=PV,a=v.act;const q=toPage(p);
+ if(a.k==='shape'){const r=relPt(q);if(a.o.type==='pen'||a.o.type==='hl'){const L=a.o.pts[a.o.pts.length-1];if(Math.hypot((r[0]-L[0])*v.w,(r[1]-L[1])*v.h)*v.s<2.5)return;a.o.pts.push(r)}else a.o.pts[1]=r;
+  $('#pvTmp').innerHTML=`<svg class="ann" viewBox="0 0 ${v.w} ${v.h}" preserveAspectRatio="none">${annEl(a.o,v.w,v.h)}</svg>`}
+ else if(a.k==='move'){if(!a.moved&&Math.hypot(q.x-a.start.x,q.y-a.start.y)*v.s<8)return;a.moved=true;const dx=(q.x-a.start.x)/v.w,dy=(q.y-a.start.y)/v.h;a.o.pts=a.b.pts.map(pt=>[+(pt[0]+dx).toFixed(5),+(pt[1]+dy).toFixed(5)]);pvAnn()}}
+function actCancel(a){$('#pvTmp').innerHTML='';if(a&&a.k==='move'){a.o.pts=a.b.pts;pvAnn()}}
+async function actEnd(a){const v=PV;$('#pvTmp').innerHTML='';
+ if(a.k==='shape'){const o=a.o,P=o.pts;const ok=(o.type==='pen'||o.type==='hl')?P.length>=2:Math.hypot((P[1][0]-P[0][0])*v.w,(P[1][1]-P[0][1])*v.h)*v.s>=6;if(!ok)return;await annAdd(o);pvAnn();return}
+ if(a.k==='move'&&a.moved){await save('annots',a.o);pvRec({a:'mod',b:a.b,o:clone(a.o)});pvAnn()}}
+async function annAdd(o){await save('annots',o);pvRec({a:'add',o:clone(o)})}
+async function annRm(id){await remove('annots',id)}
+function pvRec(op){if(!PV)return;PV.undo.push(op);PV.redo=[];pvUndoUI()}
+async function applyOp(op,inv){if(op.a==='batch'){for(const x of (inv?[...op.ops].reverse():op.ops))await applyOp(x,inv);return}
+ if(op.a==='add'){if(inv)await annRm(op.o.id);else await save('annots',clone(op.o))}else if(op.a==='del'){if(inv)await save('annots',clone(op.o));else await annRm(op.o.id)}else if(op.a==='mod')await save('annots',clone(inv?op.b:op.o))}
+App.pvUndo=async()=>{const op=PV.undo.pop();if(!op)return toast('Nichts rückgängig zu machen');await applyOp(op,true);PV.redo.push(op);PV.sel='';pvAnn();pvUndoUI();rowNextReset()};
+App.pvRedo=async()=>{const op=PV.redo.pop();if(!op)return;await applyOp(op,false);PV.undo.push(op);PV.sel='';pvAnn();pvUndoUI();rowNextReset()};
+function pvUndoUI(){const v=PV;if(!v)return;document.querySelectorAll('.bUndo').forEach(b=>b.disabled=!v.undo.length);document.querySelectorAll('.bRedo').forEach(b=>b.disabled=!v.redo.length);const s=v.sel&&S.annots.find(a=>a.id===v.sel);const bd=$('#bDel'),bt=$('#bTxt');if(bd)bd.disabled=!s;if(bt)bt.classList.toggle('hidden',!(s&&s.type==='text'))}
+function pvAnn(){const v=PV;if(!v)return;const e=$('#pvAnn');if(e)e.innerHTML=annSvg(v.pl.id,v.pg,v.w,v.h,v.sel)}
+App.drTool=t=>{DRAW.tool=t;PV.sel='';pvAnn();pvModeUI()};
+App.drCol=async c=>{DRAW.color=c;const s=PV.sel&&S.annots.find(a=>a.id===PV.sel);if(s&&s.type!=='row'){const b=clone(s);s.color=c;await save('annots',s);pvRec({a:'mod',b,o:clone(s)});pvAnn()}pvModeUI()};
+App.drW=w=>{DRAW.w=w;pvModeUI()};
+App.annDelSel=async()=>{const s=PV.sel&&S.annots.find(a=>a.id===PV.sel);if(!s)return toast('Zuerst mit ⬚ etwas auswählen');const o=clone(s);await annRm(s.id);pvRec({a:'del',o});PV.sel='';pvAnn();pvUndoUI();rowNextReset();toast('Gelöscht (↶ macht es rückgängig)')};
+App.annEditText=()=>{const s=PV.sel&&S.annots.find(a=>a.id===PV.sel);if(s&&s.type==='text')annTextModal(s.text,s.id)};
+const TSZ=[[14,'klein'],[20,'mittel'],[28,'groß'],[40,'sehr groß']];
+function annTextModal(t,id){openModal(`<h3>${id?'Text ändern':'Text einfügen'}</h3><label class="fld"><span>Text</span><input id="annTxt" value="${esc(t)}" maxlength="200" onkeydown="if(event.key==='Enter')App.annTextOk('${id||''}')"></label>${id?'':`<div class="chips" id="tsz">${TSZ.map(([s,l])=>`<button class="${DRAW.ts===s?'on':''}" onclick="App.setTs(${s})">${l}</button>`).join('')}</div>`}<div class="btnrow"><button class="btn" onclick="App.annTextOk('${id||''}')">OK</button><button class="btn sec" onclick="App.closeModal()">Abbrechen</button></div>`);setTimeout(()=>{const i=$('#annTxt');if(i)i.focus()},60)}
+App.setTs=s=>{DRAW.ts=s;document.querySelectorAll('#tsz button').forEach((b,i)=>b.classList.toggle('on',TSZ[i][0]===s))};
+App.annTextOk=async id=>{const t=(($('#annTxt')||{}).value||'').trim();App.closeModal();if(!t)return;const v=PV;
+ if(id){const a=S.annots.find(x=>x.id===id);if(!a)return;const b=clone(a);a.text=t;await save('annots',a);pvRec({a:'mod',b,o:clone(a)})}
+ else if(v.txtAt)await annAdd({id:'an_'+uid(),projectId:v.pl.projectId,planId:v.pl.id,page:v.pg,type:'text',color:DRAW.color,text:t,size:+(DRAW.ts/v.s/v.w).toFixed(6),pts:[v.txtAt]});pvAnn()};
+/* Reihenbeschriftung */
+function rowNext(bf){const l=S.annots.filter(a=>a.type==='row'&&a.planId===PV.pl.id&&a.baufeld===bf);const st=+ROWC.step||1;return l.length?Math.max(...l.map(a=>+a.num||0))+st:(+ROWC.start||1)}
+function rowNextReset(){if(PV&&PV.mode==='rows'){ROWC.next=rowNext(ROWC.bf);rowNextUI()}}
+function rowNextUI(){const e=$('#rowNext');if(e)e.textContent=ROWC.bf?`${ROWC.prefix||''}${ROWC.next} (${ROWC.bf})`:'– bitte Baufeld eingeben –'}
+function rowsEnter(){const v=PV;if(!ROWC.bf||ROWC._plan!==v.pl.id){const f=bfFromPlan(v.pl);if(f)ROWC.bf=f}ROWC._plan=v.pl.id;ROWC.next=rowNext(ROWC.bf);
+ const s=(id,val)=>{const e=$(id);if(e)e.value=val};s('#rBf',ROWC.bf);s('#rPre',ROWC.prefix);s('#rStart',ROWC.start);s('#rStep',ROWC.step);s('#rSize',ROWC.size);s('#rRot',String(ROWC.rot));rowNextUI()}
+App.rowCfg=(k,val)=>{if(k==='start'){ROWC.start=parseInt(val,10)||1;ROWC.next=ROWC.start}else if(k==='step')ROWC.step=parseInt(val,10)||1;else if(k==='bf'){ROWC.bf=val.trim();ROWC.next=rowNext(ROWC.bf)}else if(k==='rot')ROWC.rot=+val||0;else ROWC[k]=val;rowNextUI()};
+async function rowCreate(x,y){const v=PV;if(!ROWC.bf){toast('Bitte zuerst das Baufeld eingeben (z. B. BF 12)');const i=$('#rBf');if(i)i.focus();return}if(ROWC.next==null)ROWC.next=rowNext(ROWC.bf);const st=+ROWC.step||1;
+ await annAdd({id:'an_'+uid(),projectId:v.pl.projectId,planId:v.pl.id,page:v.pg,type:'row',pts:[[+x.toFixed(5),+y.toFixed(5)]],baufeld:ROWC.bf,num:ROWC.next,prefix:ROWC.prefix||'',step:st,rot:+ROWC.rot||0,size:RSIZE[ROWC.size]||RSIZE.M});
+ ROWC.next+=st;rowNextUI();pvAnn()}
+function rowPopup(id){const r=S.annots.find(a=>a.id===id);if(!r)return;const ds=S.defects.filter(d=>d.projectId===r.projectId&&d.baufeld===r.baufeld&&String(d.reihe)===String(r.num));
+ openModal(`<h3>${esc(r.baufeld)} · Reihe ${esc(r.num)}</h3><p class="sm mut">Beschriftung „${esc((r.prefix||'')+r.num)}“${PV?' auf '+esc(PV.pl.name):''}</p>${ds.length?`<div class="sect"><h3>Mängel in dieser Reihe (${ds.length})</h3></div><div class="list">${ds.map(d=>`<div class="row" onclick="App.closeModal();go('#/projekt/${d.projectId}/mangel/${d.id}')"><span class="pdot" style="background:${pinCol(d)}"></span><div class="grow"><div class="rt ell">#${d.nr} ${esc(d.title)}</div></div>${statusBadge(d.status)}</div>`).join('')}</div>`:''}
+ <div class="btnrow"><button class="btn" onclick="App.rowDefect('${r.id}')">⚠️ Mangel für diese Reihe anlegen</button><button class="btn sec" onclick="App.rowRenum('${r.id}')">Nummer ändern</button><button class="btn dan" onclick="App.rowDel('${r.id}',true)">Löschen + nachfolgende neu nummerieren</button><button class="btn dan" onclick="App.rowDel('${r.id}',false)">Nur löschen</button><button class="btn sec" onclick="App.closeModal()">Schließen</button></div>`)}
+App.rowDefect=id=>{const r=S.annots.find(a=>a.id===id);if(!r)return;App.closeModal();go(`#/projekt/${r.projectId}/mangel/neu?plan=${r.planId}&s=${r.page}&x=${r.pts[0][0]}&y=${r.pts[0][1]}&bf=${encodeURIComponent(r.baufeld)}&reihe=${encodeURIComponent(r.num)}`)};
+App.rowRenum=async id=>{const r=S.annots.find(a=>a.id===id);if(!r)return;const n=prompt('Neue Nummer für diese Reihe:',r.num);if(n==null||n.trim()==='')return;const b=clone(r);r.num=isNaN(+n)?n.trim():+n;await save('annots',r);pvRec({a:'mod',b,o:clone(r)});App.closeModal();pvAnn();rowNextReset()};
+App.rowDel=async(id,ren)=>{const r=S.annots.find(a=>a.id===id);if(!r)return;if(!confirm(ren?`Reihe ${r.num} (${r.baufeld}) löschen und alle höheren Nummern dieses Baufelds auf diesem Plan um ${r.step||1} verringern?\n(Reihenangaben in Mängeln werden nicht automatisch geändert.)`:`Beschriftung Reihe ${r.num} (${r.baufeld}) löschen?`))return;
+ const ops=[{a:'del',o:clone(r)}];await annRm(id);
+ if(ren){const st=r.step||1;for(const a of S.annots.filter(a=>a.type==='row'&&a.planId===r.planId&&a.baufeld===r.baufeld&&+a.num>+r.num)){const b=clone(a);a.num=+a.num-st;await save('annots',a);ops.push({a:'mod',b,o:clone(a)})}}
+ pvRec(ops.length>1?{a:'batch',ops}:ops[0]);App.closeModal();pvAnn();rowNextReset();toast(ren&&ops.length>1?`Gelöscht, ${ops.length-1} Reihe(n) neu nummeriert`:'Beschriftung gelöscht')};
+/* Modi, Pins */
+function pvSetMode(m){const v=PV;v.mode=v.mode===m?'':m;if(v.mode!=='pin')v.assign='';v.sel='';if(v.mode==='rows')rowsEnter();pvAnn();pvModeUI();pvUndoUI()}
+App.pvMode=m=>pvSetMode(m);
+App.pvPinMode=()=>pvSetMode('pin');
+function pvModeUI(){const v=PV;if(!v)return;const m=v.mode;
+ [['#pvPinBtn','pin'],['#pvDrawBtn','draw'],['#pvRowBtn','rows']].forEach(([id,k])=>{const b=$(id);if(b)b.classList.toggle('sec',m!==k)});
+ $('#pvTools').classList.toggle('hidden',m!=='draw');$('#pvRows').classList.toggle('hidden',m!=='rows');v.st.classList.toggle('pinmode',!!m);v.st.classList.toggle('drawmode',m==='draw'&&DRAW.tool!=='pan'&&DRAW.tool!=='select');
+ const h=$('#pvHint');const d=v.assign&&S.defects.find(x=>x.id===v.assign);
+ h.textContent=m==='pin'?(d?`Tippe auf die Stelle im Plan, an der Mangel #${d.nr} „${d.title}“ liegt.`:'Tippe auf die Stelle im Plan, an der der Mangel liegt.'):m==='draw'?'Ein Finger zeichnet · zwei Finger verschieben/zoomen · am PC: Mausrad zoomt, ✋ verschiebt · ⬚ wählt aus (ziehen = verschieben)':m==='rows'?'Reihen nacheinander antippen – die Nummer zählt automatisch hoch. Beschriftung ziehen = verschieben, antippen = Optionen (z. B. Mangel anlegen).':'';
+ h.classList.toggle('hidden',!m);
+ document.querySelectorAll('#pvTools [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===DRAW.tool));document.querySelectorAll('#pvTools [data-col]').forEach(b=>b.classList.toggle('on',b.dataset.col===DRAW.color));document.querySelectorAll('#pvTools [data-w]').forEach(b=>b.classList.toggle('on',+b.dataset.w===DRAW.w));pvUndoUI()}
 function pvPins(){const v=PV;if(!v)return;const l=S.defects.filter(d=>d.pin&&d.pin.planId===v.pl.id&&(d.pin.page||1)===v.pg).sort((a,b)=>a.nr-b.nr);
  $('#pvPins').innerHTML=l.map(d=>`<div class="pin ${v.focus===d.id?'hl':''}" data-id="${d.id}" style="left:${(d.pin.x*100).toFixed(4)}%;top:${(d.pin.y*100).toFixed(4)}%;--c:${pinCol(d)}" title="#${d.nr} ${esc(d.title)}"><i></i><span>${d.nr}</span></div>`).join('');
- $('#pvList').innerHTML=l.length?`<div class="sect"><h3>Mängel auf ${v.pl.pages.length>1?'dieser Seite':'diesem Plan'} (${l.length})</h3></div><div class="list">${l.map(d=>`<div class="row" onclick="App.pvFocus('${d.id}')"><span class="pdot" style="background:${pinCol(d)}"></span><div class="grow"><div class="rt ell">#${d.nr} ${esc(d.title)}</div><div class="mut sm ell">${esc([d.location,d.firma].filter(Boolean).join(' · '))||'&nbsp;'}</div></div>${statusBadge(d.status)}</div>`).join('')}</div>`:`<p class="sm mut">Noch keine Mängel auf ${v.pl.pages.length>1?'dieser Seite':'diesem Plan'}. Tippe auf „📍 Mangel setzen“ und dann auf die Stelle im Plan.</p>`}
-function pvModeUI(){const v=PV;if(!v)return;const b=$('#pvPinBtn'),h=$('#pvHint');b.classList.toggle('sec',!v.pin);b.textContent=v.pin?'✕ Setzen beenden':'📍 Mangel setzen';v.st.classList.toggle('pinmode',v.pin);h.classList.toggle('hidden',!v.pin);
- const d=v.assign&&S.defects.find(x=>x.id===v.assign);h.textContent=d?`Tippe auf die Stelle im Plan, an der Mangel #${d.nr} „${d.title}“ liegt.`:'Tippe auf die Stelle im Plan, an der der Mangel liegt.'}
-function pvTap(e,pinId){const v=PV;if(pinId&&!v.pin)return pvPinPopup(pinId);if(!v.pin)return;const r=v.st.getBoundingClientRect();const x=(e.clientX-r.left-v.tx)/v.s/v.w,y=(e.clientY-r.top-v.ty)/v.s/v.h;if(x<0||y<0||x>1||y>1)return toast('Bitte innerhalb des Plans tippen');
+ $('#pvList').innerHTML=l.length?`<div class="sect"><h3>Mängel auf ${v.pl.pages.length>1?'dieser Seite':'diesem Plan'} (${l.length})</h3></div><div class="list">${l.map(d=>`<div class="row" onclick="App.pvFocus('${d.id}')"><span class="pdot" style="background:${pinCol(d)}"></span><div class="grow"><div class="rt ell">#${d.nr} ${esc(d.title)}</div><div class="mut sm ell">${esc([bfr(d),d.location,d.firma].filter(Boolean).join(' · '))||'&nbsp;'}</div></div>${statusBadge(d.status)}</div>`).join('')}</div>`:`<p class="sm mut">Noch keine Mängel auf ${v.pl.pages.length>1?'dieser Seite':'diesem Plan'}. Tippe auf „📍 Mangel“ und dann auf die Stelle im Plan.</p>`}
+function pvTap(e,pinId){const v=PV;const m=v.mode;const r=v.st.getBoundingClientRect();const px=(e.clientX-r.left-v.tx)/v.s,py=(e.clientY-r.top-v.ty)/v.s;const x=px/v.w,y=py/v.h;const inside=x>=0&&y>=0&&x<=1&&y<=1;
+ if(!m){if(pinId)return pvPinPopup(pinId);const h=annHit(px,py,12/v.s,['row']);if(h)return rowPopup(h.id);return}
+ if(m==='draw'){if(DRAW.tool==='text'&&inside){v.txtAt=[+x.toFixed(5),+y.toFixed(5)];annTextModal('')}return}
+ if(!inside)return toast('Bitte innerhalb des Plans tippen');
+ if(m==='rows')return rowCreate(x,y);
  const pin={planId:v.pl.id,page:v.pg,x:+x.toFixed(5),y:+y.toFixed(5)};if(v.assign)return pvAssign(v.assign,pin);pvChooseModal(pin)}
 function pvDefRows(q){const pid=PV.pl.projectId;q=lc(q);const l=S.defects.filter(d=>d.projectId===pid).sort((a,b)=>(ACTIVE_D.includes(b.status)-ACTIVE_D.includes(a.status))||b.nr-a.nr);
- return l.filter(d=>!q||lc('#'+d.nr+' '+d.title+' '+d.location+' '+d.firma).includes(q)).slice(0,80).map(d=>`<div class="row" onclick="App.pvAssignPick('${d.id}')"><span class="pdot" style="background:${pinCol(d)}"></span><div class="grow"><div class="rt ell">#${d.nr} ${esc(d.title)}</div><div class="mut sm ell">${esc([d.location,d.firma].filter(Boolean).join(' · '))}${d.pin?' · 📍 schon verortet (wird verschoben)':''}</div></div>${statusBadge(d.status)}</div>`).join('')||'<div class="empty">Keine Mängel gefunden.</div>'}
+ return l.filter(d=>!q||lc('#'+d.nr+' '+d.title+' '+d.location+' '+d.firma+' '+bfr(d)).includes(q)).slice(0,80).map(d=>`<div class="row" onclick="App.pvAssignPick('${d.id}')"><span class="pdot" style="background:${pinCol(d)}"></span><div class="grow"><div class="rt ell">#${d.nr} ${esc(d.title)}</div><div class="mut sm ell">${esc([bfr(d),d.location,d.firma].filter(Boolean).join(' · '))}${d.pin?' · 📍 schon verortet (wird verschoben)':''}</div></div>${statusBadge(d.status)}</div>`).join('')||'<div class="empty">Keine Mängel gefunden.</div>'}
 function pvChooseModal(pin){PIN_TMP=pin;openModal(`<h3>📍 Mangel an dieser Stelle</h3><button class="btn blk" onclick="App.pvNewDefect()">＋ Neuen Mangel hier erfassen</button><div class="sect"><h3>oder bestehenden Mangel zuordnen</h3></div><div class="searchbar">${ICON.search}<input type="search" placeholder="Mängel durchsuchen …" oninput="App.pvDefFilter(this.value)"></div><div class="list" id="pvdl">${pvDefRows('')}</div><div class="btnrow"><button class="btn sec blk" onclick="App.closeModal()">Abbrechen</button></div>`)}
 App.pvDefFilter=v=>{$('#pvdl').innerHTML=pvDefRows(v)};
 App.pvAssignPick=id=>{App.closeModal();pvAssign(id,PIN_TMP)};
 App.pvNewDefect=()=>{const p=PIN_TMP;App.closeModal();go(`#/projekt/${PV.pl.projectId}/mangel/neu?plan=${p.planId}&s=${p.page}&x=${p.x}&y=${p.y}`)};
-async function pvAssign(id,pin){const d=S.defects.find(x=>x.id===id);if(!d||!pin)return;d.pin=pin;await save('defects',d);toast('Mangel #'+d.nr+' im Plan verortet');PV.assign='';PV.pin=false;PV.focus=d.id;
+async function pvAssign(id,pin){const d=S.defects.find(x=>x.id===id);if(!d||!pin)return;d.pin=pin;await save('defects',d);toast('Mangel #'+d.nr+' im Plan verortet');PV.assign='';PV.mode='';PV.focus=d.id;
  const h=`#/projekt/${PV.pl.projectId}/plan/${PV.pl.id}?s=${pin.page}&f=${d.id}`;history.replaceState(null,'',h);lastHash=location.hash;pvModeUI();pvPins()}
 function pvPinPopup(id){const d=S.defects.find(x=>x.id===id);if(!d)return;
- openModal(`<h3>Mangel #${d.nr}</h3><div class="rt">${esc(d.title)}</div><p class="sm mut">${esc([d.location,d.firma,d.deadline&&'Frist '+fmtD(d.deadline)].filter(Boolean).join(' · '))}</p>${statusBadge(d.status)}${d.desc?`<p class="sm" style="white-space:pre-wrap">${esc(d.desc.slice(0,300))}</p>`:''}${d.photos?.length?`<div class="photos" style="margin-top:8px">${d.photos.slice(0,3).map(ph=>`<div class="ph"><img data-photo="${ph}" alt="Foto"></div>`).join('')}</div>`:''}
+ openModal(`<h3>Mangel #${d.nr}</h3><div class="rt">${esc(d.title)}</div><p class="sm mut">${esc([bfr(d),d.location,d.firma,d.deadline&&'Frist '+fmtD(d.deadline)].filter(Boolean).join(' · '))}</p>${statusBadge(d.status)}${d.desc?`<p class="sm" style="white-space:pre-wrap">${esc(d.desc.slice(0,300))}</p>`:''}${d.photos?.length?`<div class="photos" style="margin-top:8px">${d.photos.slice(0,3).map(ph=>`<div class="ph"><img data-photo="${ph}" alt="Foto"></div>`).join('')}</div>`:''}
  <div class="btnrow"><button class="btn" onclick="App.closeModal();go('#/projekt/${d.projectId}/mangel/${d.id}')">Mangel öffnen</button><button class="btn sec" onclick="App.pvMovePin('${d.id}')">Pin verschieben</button><button class="btn dan" onclick="App.pvRmPin('${d.id}')">Pin entfernen</button><button class="btn sec" onclick="App.closeModal()">Schließen</button></div>`)}
-App.pvMovePin=id=>{App.closeModal();PV.pin=true;PV.assign=id;pvModeUI()};
+App.pvMovePin=id=>{App.closeModal();PV.mode='pin';PV.assign=id;pvModeUI()};
 App.pvRmPin=async id=>{const d=S.defects.find(x=>x.id===id);if(!d||!confirm('Pin von Mangel #'+d.nr+' entfernen? Der Mangel selbst bleibt erhalten.'))return;delete d.pin;await save('defects',d);App.closeModal();pvPins();toast('Pin entfernt')};
-App.pvPinMode=()=>{PV.pin=!PV.pin;if(!PV.pin)PV.assign='';pvModeUI()};
-App.pvPage=(dir,val)=>{const n=val?+val:PV.pg+dir;go(`#/projekt/${PV.pl.projectId}/plan/${PV.pl.id}?s=${n}${PV.assign?`&d=${PV.assign}&modus=verorten`:PV.pin?'&modus=pin':''}`)};
+App.pvPage=(dir,val)=>{const n=val?+val:PV.pg+dir;go(`#/projekt/${PV.pl.projectId}/plan/${PV.pl.id}?s=${n}${PV.assign?`&d=${PV.assign}&modus=verorten`:PV.mode?'&modus='+MODEQ[PV.mode]:''}`)};
 App.pvZoom=f=>{const r=PV.st.getBoundingClientRect();pvZoomAt(f,r.width/2,r.height/2)};
 App.pvFit=()=>pvFit();
 function pvFocusOn(d){const v=PV;const r=v.st.getBoundingClientRect();const fit=pvFitScale();v.s=Math.max(v.s,Math.min(fit*5,1));v.tx=r.width/2-d.pin.x*v.w*v.s;v.ty=r.height/2-d.pin.y*v.h*v.s;v.focus=d.id;pvApply();pvPins()}
 App.pvFocus=id=>{const d=S.defects.find(x=>x.id===id);if(d&&d.pin)pvFocusOn(d);window.scrollTo({top:0,behavior:'smooth'})};
 /* ---- Plan-Ausschnitt (Mangel-Detail & Bericht) ---- */
 function planSnip(d,cls='psnip'){const pl=d.pin&&S.plans.find(x=>x.id===d.pin.planId);if(!pl)return '';const P=pl.pages[(d.pin.page||1)-1];if(!P||!P.w)return '';const W=Math.max(150,P.w/700*100);const ratio=P.h/P.w;
- return `<div class="${cls}"><img data-photo="${P.photo}" alt="Planausschnitt" style="width:${W.toFixed(2)}%;margin-left:calc(50% - ${(d.pin.x*W).toFixed(3)}%);margin-top:calc(var(--sh) - ${(d.pin.y*W*ratio).toFixed(3)}%)"><div class="pin" style="left:50%;top:var(--sh);--c:${pinCol(d)}"><i></i><span>${d.nr}</span></div></div>`}
+ return `<div class="${cls}"><div class="snipin" style="width:${W.toFixed(2)}%;margin-left:calc(50% - ${(d.pin.x*W).toFixed(3)}%);margin-top:calc(var(--sh) - ${(d.pin.y*W*ratio).toFixed(3)}%)"><img data-photo="${P.photo}" alt="Planausschnitt"><div class="annwrap">${annSvg(pl.id,d.pin.page||1,P.w,P.h)}</div></div><div class="pin" style="left:50%;top:var(--sh);--c:${pinCol(d)}"><i></i><span>${d.nr}</span></div></div>`}
 function defectPlanCard(p,d){const pls=plansOf(p.id);const pl=d.pin&&S.plans.find(x=>x.id===d.pin.planId);if(!pls.length&&!pl)return '';
  if(pl)return `<div class="card"><h3>📍 Lage im Plan</h3>${planSnip(d)}<div class="sm mut" style="margin-top:6px">${esc(pl.name)}${pl.pages.length>1?' · Seite '+(d.pin.page||1):''}</div><div class="btnrow"><button class="btn sm" onclick="App.defPlan('open')">Im Plan öffnen</button><button class="btn sm sec" onclick="App.defPlan('move')">Pin verschieben</button><button class="btn sm dan" onclick="App.defPinRm()">Pin entfernen</button></div></div>`;
  return `<div class="card"><h3>📍 Lage im Plan</h3>${d._new?'<p class="sm mut">Nach dem Speichern kann der Mangel im Plan verortet werden – oder direkt im Plan („Pläne“ → Plan öffnen → „📍 Mangel setzen“) erfassen.</p>':`<p class="sm mut">Noch nicht im Plan verortet.</p><label class="fld"><span>Plan</span><select id="dplsel">${pls.map(x=>opt([x.id,x.name+(x.revision?' ('+x.revision+')':'')],'')).join('')}</select></label><div class="btnrow"><button class="btn sm" onclick="App.defPlan('new')">📍 Im Plan verorten</button></div>`}</div>`}
@@ -721,7 +847,7 @@ App.defPlan=async mode=>{const d=DRAFT;if(!(d.title||'').trim())return toast('Bi
  if(['erledigt','abgenommen'].includes(d.status)&&!d.doneAt)d.doneAt=todayISO();if(ACTIVE_D.includes(d.status))d.doneAt='';await commitPhotos(d);const o=clean(d);await save('defects',o);DRAFT=null;
  go(`#/projekt/${o.projectId}/plan/${planId}?s=${page}`+(mode==='open'?`&f=${o.id}`:`&d=${o.id}&modus=verorten`))};
 function rptPlans(l){const groups=new Map();for(const d of l){if(!d.pin)continue;const pl=S.plans.find(x=>x.id===d.pin.planId);if(!pl)continue;const k=pl.id+'|'+(d.pin.page||1);if(!groups.has(k))groups.set(k,{pl,page:d.pin.page||1,ds:[]});groups.get(k).ds.push(d)}
- if(!groups.size)return '';return `<h2>Pläne mit Mangel-Verortung</h2>`+[...groups.values()].map(g=>{const P=g.pl.pages[g.page-1];if(!P)return '';return `<section class="r-plan"><h4>${esc(g.pl.name)}${g.pl.revision?' · Index '+esc(g.pl.revision):''}${g.pl.pages.length>1?' · Seite '+g.page:''}</h4><div class="r-planimg"><img data-photo="${P.photo}" alt="Plan">${g.ds.map(d=>`<div class="pin" style="left:${(d.pin.x*100).toFixed(4)}%;top:${(d.pin.y*100).toFixed(4)}%;--c:${pinCol(d)}"><i></i><span>${d.nr}</span></div>`).join('')}</div><div class="r-pleg">Mängel: ${g.ds.map(d=>`<b style="color:${pinCol(d)}">#${d.nr}</b> ${esc(d.title)}`).join(' · ')}</div></section>`}).join('')+`<div class="r-pleg">Farben: ${DSTAT.map(s=>`<b style="color:${PIN_COL[s]}">●</b> ${s}`).join('  ')}</div>`}
+ if(!groups.size)return '';return `<h2>Pläne mit Mangel-Verortung</h2>`+[...groups.values()].map(g=>{const P=g.pl.pages[g.page-1];if(!P)return '';return `<section class="r-plan"><h4>${esc(g.pl.name)}${g.pl.revision?' · Index '+esc(g.pl.revision):''}${g.pl.pages.length>1?' · Seite '+g.page:''}</h4><div class="r-planimg"><img data-photo="${P.photo}" alt="Plan"><div class="annwrap">${annSvg(g.pl.id,g.page,P.w,P.h)}</div>${g.ds.map(d=>`<div class="pin" style="left:${(d.pin.x*100).toFixed(4)}%;top:${(d.pin.y*100).toFixed(4)}%;--c:${pinCol(d)}"><i></i><span>${d.nr}</span></div>`).join('')}</div><div class="r-pleg">Mängel: ${g.ds.map(d=>`<b style="color:${pinCol(d)}">#${d.nr}</b> ${esc(d.title)}${bfr(d)?' ('+esc(bfr(d))+')':''}`).join(' · ')}</div></section>`}).join('')+`<div class="r-pleg">Farben: ${DSTAT.map(s=>`<b style="color:${PIN_COL[s]}">●</b> ${s}`).join('  ')}</div>`}
 
 /* ================= Suche ================= */
 let searchQ='';
@@ -732,7 +858,7 @@ function searchResults(){const q=lc(searchQ.trim());if(q.length<2)return '<div c
  const pc=[];S.projects.forEach(p=>(p.parties||[]).forEach(x=>{if(m(x.firma,x.name,x.gewerk,x.phone,x.email))pc.push(`<a class="row" href="#/projekt/${p.id}"><div class="grow"><div class="rt">${esc(x.firma)} <span class="mut sm">${esc(x.name||'')}</span></div><div class="mut sm">${esc(p.name)}</div>${contactLinks(x)}</div></a>`)}));
  S.contacts.filter(c=>m(c.firma,c.name,c.gewerk,c.phone,c.email,c.notes)).forEach(c=>pc.push(`<div class="row" onclick="App.contactModal('${c.id}')"><div class="grow"><div class="rt">${esc(c.firma)} <span class="mut sm">${esc(c.name||'')}</span></div><div class="mut sm">Kontakt</div>${contactLinks(c)}</div></div>`));add('Kontakte / Beteiligte',pc);
  add('Bautagebuch',S.diary.filter(e=>m(e.activities,e.incidents,e.hindrances,(e.staff||[]).map(s=>s.firma).join(' '),fmtD(e.date))).sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<a class="row" href="#/projekt/${e.projectId}/tagebuch/${e.id}"><div class="grow"><div class="rt">${weekday(e.date)}, ${fmtD(e.date)}</div><div class="mut sm">${pn(e.projectId)} · ${esc((e.activities||'').slice(0,90))}</div></div></a>`));
- add('Mängel',S.defects.filter(d=>m('#'+d.nr,d.title,d.desc,d.location,d.firma)).map(d=>`<a class="row" href="#/projekt/${d.projectId}/mangel/${d.id}"><div class="grow"><div class="rt">#${d.nr} ${esc(d.title)}</div><div class="mut sm">${pn(d.projectId)} · ${esc(d.firma||'')}</div></div>${statusBadge(d.status)}</a>`));
+ add('Mängel',S.defects.filter(d=>m('#'+d.nr,d.title,d.desc,d.location,d.firma,bfr(d))).map(d=>`<a class="row" href="#/projekt/${d.projectId}/mangel/${d.id}"><div class="grow"><div class="rt">#${d.nr} ${esc(d.title)}</div><div class="mut sm">${pn(d.projectId)} · ${esc(d.firma||'')}</div></div>${statusBadge(d.status)}</a>`));
  add('Termine & Aufgaben',S.tasks.filter(t=>m(t.title,t.notes,t.responsible,t.type)).map(t=>`<div class="row" onclick="App.taskModal(null,'${t.id}')"><div class="grow"><div class="rt">${esc(t.title)}</div><div class="mut sm">${pn(t.projectId)} · ${esc(t.type)} ${fmtD(t.date)}${t.done?' · erledigt':''}</div></div></div>`));
  add('Pläne',S.plans.filter(x=>m(x.name,x.number,x.revision,x.category,x.notes,x.fileName)).map(x=>`<a class="row" href="#/projekt/${x.projectId}/plan/${x.id}"><div class="grow"><div class="rt">${esc(x.name)}</div><div class="mut sm">${pn(x.projectId)}${x.number?' · Nr. '+esc(x.number):''}${x.revision?' · Index '+esc(x.revision):''}</div></div></a>`));
  add('Protokolle',S.protocols.filter(x=>m(x.title,x.place,x.notes,(x.items||[]).map(i=>i.text+' '+i.responsible).join(' '),(x.participants||[]).map(t=>t.name+' '+t.firma).join(' '))).map(x=>`<a class="row" href="#/projekt/${x.projectId}/protokoll/${x.id}"><div class="grow"><div class="rt">${esc(x.title)}</div><div class="mut sm">${pn(x.projectId)} · ${fmtD(x.date)}</div></div></a>`));
@@ -748,7 +874,7 @@ function viewSettings(){setHeader('Einstellungen');const s=S.settings;const f=(l
  return `<div class="card"><h3>Mein Büro (erscheint auf Berichten)</h3><div class="grid">${f('Firmenname','company')}${f('Name Bauleiter','name')}</div>${f('Anschrift','address','textarea')}<div class="grid">${f('Telefon','phone','tel')}${f('E-Mail','email','email')}</div>
  <div class="fld"><span class="mut sm" style="font-weight:600">Logo</span>${s.logo?`<img class="logo-prev" src="${s.logo}" alt="Logo">`:'<div class="mut sm">Kein Logo</div>'}<div class="btnrow"><button class="btn sm sec" onclick="App.pickLogo()">Logo wählen</button>${s.logo?'<button class="btn sm dan" onclick="App.rmLogo()">Logo entfernen</button>':''}</div></div></div>
  <div class="card"><h3>Datensicherung</h3><p class="sm">Alle Daten liegen nur in diesem Browser auf diesem Gerät. Sichere regelmäßig und übertrage die Datei so auf andere Geräte (z. B. per Cloud, E-Mail, USB).</p>
- <p class="sm mut">${cnt[0]} Projekte · ${cnt[1]} Kontakte · ${cnt[2]} Tagebucheinträge · ${cnt[3]} Mängel · ${cnt[4]} Aufgaben · ${cnt[5]} Protokolle · ${cnt[6]} Pläne</p><p class="sm mut" id="stinfo"></p>${s.lastExport?`<p class="sm">Letzte Sicherung: ${new Date(s.lastExport).toLocaleString('de-DE')}</p>`:'<p class="hint">Noch keine Sicherung erstellt.</p>'}
+ <p class="sm mut">${cnt[0]} Projekte · ${cnt[1]} Kontakte · ${cnt[2]} Tagebucheinträge · ${cnt[3]} Mängel · ${cnt[4]} Aufgaben · ${cnt[5]} Protokolle · ${cnt[6]} Pläne · ${cnt[7]} Zeichnungen/Reihen</p><p class="sm mut" id="stinfo"></p>${s.lastExport?`<p class="sm">Letzte Sicherung: ${new Date(s.lastExport).toLocaleString('de-DE')}</p>`:'<p class="hint">Noch keine Sicherung erstellt.</p>'}
  <div class="btnrow"><button class="btn" onclick="App.exportData()">⬇️ Sicherung exportieren (JSON)</button><button class="btn sec" onclick="App.importData('merge')">⬆️ Importieren (zusammenführen)</button><button class="btn sec" onclick="App.importData('replace')">Importieren (ersetzen)</button></div></div>
  <div class="card"><h3>Pläne</h3><label class="fld"><span>Auflösung beim Hochladen von Plänen</span><select data-s="planRes" onchange="App.setS(this)">${[['','Standard – 3500 px (empfohlen)'],['hoch','Hoch – 5000 px (schärfer, ca. doppelter Speicher)']].map(x=>opt(x,s.planRes||'')).join('')}</select></label><p class="sm mut">PDF-Seiten werden beim Hochladen in Bilder umgewandelt und offline gespeichert; das Original-PDF wird nicht gespeichert. Große Pläne belegen ca. 0,5–2 MB pro Seite und sind in der Sicherung (JSON) enthalten.</p></div>
  <div class="card"><h3>Sonstiges</h3><div class="btnrow"><button class="btn sec" onclick="App.loadSample()">Beispieldaten laden</button><button class="btn dan" onclick="App.wipe()">Alle Daten löschen</button></div><p class="sm mut" style="margin-top:12px">Bauleiter-App Version ${VERSION} · Tipp: Im Browser-Menü „Zum Startbildschirm hinzufügen“ wählen, dann startet sie wie eine App.</p></div>`}
