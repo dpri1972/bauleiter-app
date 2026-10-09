@@ -168,6 +168,36 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 .r-planimg .pin{--is:.62}
 .r-pleg{font-size:8.5pt;color:#333;margin-top:3px}
 .paper .r-snip{width:72mm;height:46mm;--sh:23mm;border-radius:0;margin:5px 0;border:1px solid #bbb}
+.cpin{position:absolute;width:0;height:0;z-index:3;transform:scale(var(--is,1));transform-origin:0 0;cursor:pointer}
+.cpin i{position:absolute;left:-15px;top:-15px;width:30px;height:30px;border-radius:50%;background:#0277bd;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.55);font:15px/26px system-ui,sans-serif;text-align:center;font-style:normal}
+.cpin.man i{background:#6a1b9a}.cpin.geo i{background:#00838f}
+.cpin i span{color:#fff;font:700 12px/26px system-ui,sans-serif}
+.cpin b{position:absolute;left:-13px;top:-13px;width:26px;height:26px;pointer-events:none}
+.cpin b:before{content:'';position:absolute;left:0;top:-34px;border-left:13px solid transparent;border-right:13px solid transparent;border-bottom:40px solid rgba(2,119,189,.8)}
+.cpin.man b:before{border-bottom-color:rgba(106,27,154,.75)}
+.cpin.clu i{width:36px;height:36px;left:-18px;top:-18px;background:#37474f;line-height:32px}.cpin.clu i span{line-height:32px}
+.cpin.hl i{box-shadow:0 0 0 4px rgba(255,179,0,.95)}
+.pvstage.drawmode .cpin{pointer-events:none}
+.psnip .cpin.snp{top:var(--sh)!important}
+.cpdot{display:inline-block;width:14px;height:14px;border-radius:50%;background:#0277bd;border:2px solid #fff;box-shadow:0 0 0 1px #bbb}.cpdot.man{background:#6a1b9a}.cpdot.clu{background:#37474f}
+.gpt{position:absolute;width:0;height:0;z-index:4;transform:scale(var(--is,1));transform-origin:0 0;pointer-events:none}
+.gpt i{position:absolute;left:-14px;top:-14px;width:28px;height:28px;border:3px solid #ff6d00;border-radius:50%;box-shadow:0 0 0 1px #fff}
+.gpt i:before,.gpt i:after{content:'';position:absolute;background:#ff6d00;left:11px;top:-8px;width:3px;height:38px}.gpt i:after{transform:rotate(90deg)}
+.gpt span{position:absolute;left:12px;top:-30px;background:#ff6d00;color:#fff;font:700 12px/18px system-ui;padding:0 5px;border-radius:9px}
+.pvfilt{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:0 0 8px;font-size:13px}
+.pvfilt select,.pvfilt input[type=date]{padding:6px;border:1px solid var(--bd);border-radius:8px;font-size:13px;background:#fff;max-width:150px}
+.pvfilt .cbl{margin:0}.pvfilt label{display:inline-flex;align-items:center;gap:4px;margin:0;font-size:13px}.pvfilt input[type=date]{width:138px}
+.glist{display:flex;flex-direction:column;gap:4px;width:100%}
+.grow2{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.grow2 .sm{flex:1;min-width:160px}
+#pvGeoP,#pvFoto{flex-direction:column;align-items:stretch}
+.qthumb{width:44px;height:44px;object-fit:cover;border-radius:6px;vertical-align:middle;border:2px solid #ffb300}
+.phgeo{position:absolute;left:2px;bottom:2px;z-index:1;font-size:14px;background:rgba(255,255,255,.85);border-radius:8px;padding:0 2px;pointer-events:none}
+.phcap{position:absolute;right:2px;bottom:2px;font-size:11px;background:rgba(0,0,0,.6);color:#fff;border-radius:6px;padding:0 4px;pointer-events:none}
+.ph img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.placer{position:relative;overflow:auto;max-height:55vh;border:1px solid var(--bd);border-radius:10px;background:#e5e9ef;-webkit-overflow-scrolling:touch}
+.placerin{position:relative;min-width:100%}.placerin img{display:block;width:100%}
+.placerin .cpin{--is:1}
+.r-planimg .cpin{--is:.62}.r-planimg .cpin i span{font-size:11px}.r-planimg .cpin.rp i{width:auto;min-width:30px;padding:0 4px;border-radius:15px;white-space:nowrap}
 /* Bericht / A4 */
 .rtool{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .paper{max-width:210mm;margin:0 auto;padding:14mm;background:#fff;color:#111;box-shadow:0 2px 14px rgba(0,0,0,.14);font-size:10.5pt;line-height:1.4}
@@ -223,7 +253,7 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 <style id="pageStyle"></style>
 <script>
 'use strict';
-const VERSION='1.2';
+const VERSION='1.3';
 /* ================= Hilfsfunktionen ================= */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -268,9 +298,9 @@ const ICON={
 };
 
 /* ================= IndexedDB ================= */
-const STORES=['projects','contacts','diary','defects','tasks','protocols','photos','meta','plans','annots'];
-const DATA=['projects','contacts','diary','defects','tasks','protocols','plans','annots'];
-const DB_VER=3; /* v2: Store „plans“, v3: Store „annots“ (Zeichnungen/Reihen) ergänzt – bestehende Daten bleiben unverändert */
+const STORES=['projects','contacts','diary','defects','tasks','protocols','photos','meta','plans','annots','photometa'];
+const DATA=['projects','contacts','diary','defects','tasks','protocols','plans','annots','photometa'];
+const DB_VER=4; /* v2: Store „plans“, v3: Store „annots“ (Zeichnungen/Reihen), v4: Store „photometa“ (Foto-GPS & Foto-Pins) ergänzt – bestehende Daten bleiben unverändert */
 let db;
 function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open('bauleiter-app',DB_VER);r.onupgradeneeded=()=>{const d=r.result;for(const s of STORES)if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})};
  r.onsuccess=()=>{const d=r.result;d.onversionchange=()=>{d.close();alert('Die Bauleiter-App wurde in einem anderen Fenster aktualisiert. Bitte diese Seite neu laden.')};res(d)};r.onerror=()=>rej(r.error);
@@ -279,11 +309,12 @@ function req(store,mode,fn){return new Promise((res,rej)=>{const t=db.transactio
 const dbAll=s=>req(s,'readonly',st=>st.getAll());
 const dbGet=(s,id)=>req(s,'readonly',st=>st.get(id));
 const dbPut=(s,o)=>req(s,'readwrite',st=>st.put(o));
-const dbDel=(s,id)=>req(s,'readwrite',st=>st.delete(id));
+const dbDel0=(s,id)=>req(s,'readwrite',st=>st.delete(id));
+const dbDel=async(s,id)=>{await dbDel0(s,id);if(s==='photos'&&S.photometa.some(m=>m.id===id)){await dbDel0('photometa',id);S.photometa=S.photometa.filter(m=>m.id!==id)}};
 const dbClear=s=>req(s,'readwrite',st=>st.clear());
 const dbPutMany=(s,arr)=>req(s,'readwrite',st=>{arr.forEach(o=>st.put(o))});
 
-const S={projects:[],contacts:[],diary:[],defects:[],tasks:[],protocols:[],plans:[],annots:[],settings:{}};
+const S={projects:[],contacts:[],diary:[],defects:[],tasks:[],protocols:[],plans:[],annots:[],photometa:[],settings:{}};
 async function loadAll(){for(const s of DATA)S[s]=await dbAll(s);const m=await dbGet('meta','settings');S.settings=m?m.value:{}}
 let persistAsked=false;
 async function save(store,obj){const now=new Date().toISOString();obj.updatedAt=now;if(!obj.createdAt)obj.createdAt=now;await dbPut(store,obj);const a=S[store];const i=a.findIndex(x=>x.id===obj.id);if(i>=0)a[i]=obj;else a.push(obj);
@@ -313,7 +344,7 @@ function fld(label,k,o={}){const t=o.m?MD:DRAFT;const v=getPath(t,k)??'';const t
  return `<label class="fld ${o.cls||''}"><span>${esc(label)}</span>${inp}</label>`}
 function datalist(id,arr){return `<datalist id="${id}">${[...new Set(arr.filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`}
 function photoField(){return `<div class="photos" id="photoStrip">${photoStrip()}</div><div class="btnrow"><button type="button" class="btn sec" onclick="App.pickPhoto(true)">📷 Foto aufnehmen</button><button type="button" class="btn sec" onclick="App.pickPhoto(false)">🖼️ Aus Galerie</button></div>`}
-function photoStrip(){return (DRAFT.photos||[]).map((id,i)=>`<div class="ph"><img data-photo="${id}" alt="Foto ${i+1}" onclick="App.viewPhoto('${id}')"><button type="button" class="phx" onclick="App.rmPhoto(${i})" aria-label="Foto entfernen">×</button></div>`).join('')||'<div class="mut sm">Noch keine Fotos</div>'}
+function photoStrip(){return (DRAFT.photos||[]).map((id,i)=>`<div class="ph">${pmBadge(id)}<img data-photo="${id}" alt="Foto ${i+1}" onclick="App.viewPhoto('${id}')"><button type="button" class="phx" onclick="App.rmPhoto(${i})" aria-label="Foto entfernen">×</button></div>`).join('')||'<div class="mut sm">Noch keine Fotos</div>'}
 App.pickPhoto=cam=>{const inp=$(cam?'#fileCam':'#fileGal');inp.value='';inp.onchange=async()=>{const files=[...inp.files];if(!files.length||!DRAFT)return;toast('Fotos werden verarbeitet …');for(const f of files){try{const data=await fileToImage(f);const id=await addPhotoData(data);DRAFT.photos.push(id);(DRAFT._newPhotos=DRAFT._newPhotos||[]).push(id)}catch(e){toast(e.message)}}const st=$('#photoStrip');st.innerHTML=photoStrip();hydratePhotos(st);toast(files.length+' Foto(s) hinzugefügt')};inp.click()};
 App.rmPhoto=i=>{if(!confirm('Foto entfernen?'))return;const [id]=DRAFT.photos.splice(i,1);(DRAFT._removed=DRAFT._removed||[]).push(id);const st=$('#photoStrip');st.innerHTML=photoStrip();hydratePhotos(st)};
 function openModal(html){$('#mbox').innerHTML=html;$('#modal').classList.remove('hidden');window.__mOpenT=Date.now();hydratePhotos($('#mbox'))}
@@ -572,12 +603,12 @@ App.delProtocol=async()=>{if(!confirm('Protokoll löschen?'))return;const d=DRAF
 /* ================= Berichte-Tab ================= */
 function tabReports(p){const t=todayISO();const prots=S.protocols.filter(x=>x.projectId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
  return `<div class="card"><h3>📒 Bautagebuch-Bericht</h3><div class="grid g2m"><label class="fld"><span>Von</span><input type="date" id="rv" value="${t}"></label><label class="fld"><span>Bis</span><input type="date" id="rb" value="${t}"></label></div>
- <div class="btnrow"><button class="btn" onclick="App.rptDiary('${p.id}')">Bericht erstellen</button><button class="btn sec" onclick="App.rptDiary('${p.id}','heute')">Heute</button><button class="btn sec" onclick="App.rptDiary('${p.id}','woche')">Diese Woche</button><button class="btn sec" onclick="App.rptDiary('${p.id}','monat')">Dieser Monat</button></div></div>
+ <div class="btnrow">${S.plans.some(x=>x.projectId===p.id)?'<label class="cbl" style="width:100%"><input type="checkbox" id="rpfp"> Mit Plan der Fotopositionen</label>':''}<button class="btn" onclick="App.rptDiary('${p.id}')">Bericht erstellen</button><button class="btn sec" onclick="App.rptDiary('${p.id}','heute')">Heute</button><button class="btn sec" onclick="App.rptDiary('${p.id}','woche')">Diese Woche</button><button class="btn sec" onclick="App.rptDiary('${p.id}','monat')">Dieser Monat</button></div></div>
  <div class="card"><h3>⚠️ Mängelbericht / Mängelliste</h3><div class="grid g2m"><label class="fld"><span>Firma</span><select id="rf"><option value="">Alle Firmen</option>${firmsOf(p).map(f=>opt(f,'')).join('')}</select></label><label class="fld"><span>Status</span><select id="rs">${DFILTER.map(x=>opt(x,'aktiv')).join('')}</select></label>${bfsOf(p.id).length?`<label class="fld"><span>Baufeld</span><select id="rbf"><option value="">Alle Baufelder</option>${bfsOf(p.id).map(f=>opt(f,'')).join('')}</select></label><label class="fld"><span>Reihe</span><input id="rre" inputmode="numeric" placeholder="alle"></label>`:''}</div>
  <label class="cbl"><input type="checkbox" id="rp" checked> Mit Fotos und Beschreibung</label>${S.plans.some(x=>x.projectId===p.id)?'<label class="cbl"><input type="checkbox" id="rpl" checked> Mit Plänen (Mangel-Pins)</label>':''}<div class="btnrow"><button class="btn" onclick="App.rptDefects('${p.id}')">Mängelbericht erstellen</button></div></div>
  <div class="card"><h3>🗒️ Besprechungsprotokoll</h3>${prots.length?`<label class="fld"><span>Protokoll</span><select id="rpr">${prots.map(x=>opt([x.id,x.title+' – '+fmtD(x.date)],'')).join('')}</select></label><div class="btnrow"><button class="btn" onclick="go('#/bericht/protokoll?id='+$('#rpr').value)">Protokoll als PDF</button><button class="btn sec" onclick="go('#/projekt/${p.id}/protokoll/neu')">+ Neues Protokoll</button></div>`:`<p class="mut">Noch keine Protokolle.</p><div class="btnrow"><button class="btn sec" onclick="go('#/projekt/${p.id}/protokoll/neu')">+ Neues Protokoll</button></div>`}</div>
  <p class="mut sm">Im Bericht auf „Drucken / Als PDF speichern“ tippen und als Drucker „Als PDF speichern“ wählen (am iPhone: Teilen → Drucken → mit zwei Fingern aufziehen → Teilen).</p>`}
-App.rptDiary=(pid,preset)=>{let v=$('#rv').value,b=$('#rb').value;const t=todayISO();if(preset==='heute')v=b=t;if(preset==='woche'){const wd=(new Date(t+'T12:00:00').getDay()+6)%7;v=addDays(t,-wd);b=addDays(v,6)}if(preset==='monat'){v=t.slice(0,8)+'01';const d=new Date(t+'T12:00:00');b=isoDate(new Date(d.getFullYear(),d.getMonth()+1,0))}if(!v||!b)return toast('Bitte Zeitraum wählen');if(b<v)[v,b]=[b,v];go(`#/bericht/tagebuch?p=${pid}&von=${v}&bis=${b}`)};
+App.rptDiary=(pid,preset)=>{let v=$('#rv').value,b=$('#rb').value;const t=todayISO();if(preset==='heute')v=b=t;if(preset==='woche'){const wd=(new Date(t+'T12:00:00').getDay()+6)%7;v=addDays(t,-wd);b=addDays(v,6)}if(preset==='monat'){v=t.slice(0,8)+'01';const d=new Date(t+'T12:00:00');b=isoDate(new Date(d.getFullYear(),d.getMonth()+1,0))}if(!v||!b)return toast('Bitte Zeitraum wählen');if(b<v)[v,b]=[b,v];go(`#/bericht/tagebuch?p=${pid}&von=${v}&bis=${b}${$('#rpfp')?.checked?'&fplan=1':''}`)};
 App.rptDefects=pid=>go(`#/bericht/maengel?p=${pid}&firma=${encodeURIComponent($('#rf').value)}&status=${encodeURIComponent($('#rs').value)}&fotos=${$('#rp').checked?1:0}&plaene=${$('#rpl')?.checked?1:0}&bf=${encodeURIComponent($('#rbf')?.value||'')}&reihe=${encodeURIComponent(($('#rre')?.value||'').trim())}`);
 /* ================= Berichte (A4 / PDF) ================= */
 function rptHead(title,sub,p){const st=S.settings;
@@ -596,7 +627,7 @@ function viewReport(type,q){
   <div class="r-block"><h4>Ausgeführte Tätigkeiten / Leistungen</h4><div class="r-text">${esc(e.activities)||'–'}</div></div>
   <div class="r-block"><h4>Besondere Vorkommnisse</h4><div class="r-text">${esc(e.incidents)||'keine'}</div></div>
   <div class="r-block"><h4>Behinderungen / Bedenken</h4><div class="r-text">${esc(e.hindrances)||'keine'}</div></div>
-  ${e.photos?.length?`<h4>Fotodokumentation</h4>${rptPhotos(e.photos,fmtD(e.date)+' – ')}`:''}</section>`}).join(''):`<p><i>Im gewählten Zeitraum gibt es keine Tagebucheinträge.</i></p>`)+rptSign();
+  ${e.photos?.length?`<h4>Fotodokumentation</h4>${rptPhotos(e.photos,fmtD(e.date)+' – ')}`:''}</section>`}).join(''):`<p><i>Im gewählten Zeitraum gibt es keine Tagebucheinträge.</i></p>`)+(q.get('fplan')==='1'?rptPhotoPlans(l,p.id,v!==b):'')+rptSign();
  }else if(type==='maengel'){p=proj(q.get('p'));if(!p)return notFound();back=`#/projekt/${p.id}/maengel`;const st=q.get('status')||'aktiv',firma=q.get('firma')||'',fotos=q.get('fotos')==='1',withPlans=q.get('plaene')==='1',bf=q.get('bf')||'',reihe=q.get('reihe')||'';
   const l=filterDefects(S.defects.filter(d=>d.projectId===p.id),st,firma,bf,reihe).sort((a,b)=>a.nr-b.nr);const stl=(DFILTER.find(x=>x[0]===st)||[st,st])[1];
   title=fotos?'Mängelbericht':'Mängelliste';const cnt=s=>l.filter(d=>d.status===s).length;
@@ -662,15 +693,15 @@ function planMetaModal(){const ex=!MD._new;
 App.planEdit=id=>{const x=S.plans.find(p=>p.id===id);if(!x)return;MD=clone(x);planMetaModal()};
 App.planSave=async()=>{if(!(MD.name||'').trim())return toast('Bitte einen Plannamen eingeben');const isNew=!!MD._new;const o=clean(MD);o.name=o.name.trim();await save('plans',o);MD=null;App.closeModal();toast('Plan gespeichert');if(isNew)go(`#/projekt/${o.projectId}/plan/${o.id}`);else render()};
 App.planDel=async id=>{const x=S.plans.find(p=>p.id===id);if(!x)return;const pins=S.defects.filter(d=>d.pin&&d.pin.planId===id);if(!confirm(`Plan „${x.name}“ löschen?${pins.length?`\n${pins.length} Mangel-Pin(s) werden vom Plan entfernt (die Mängel selbst bleiben erhalten).`:''}`))return;
- for(const d of pins){delete d.pin;await save('defects',d)}for(const a of S.annots.filter(a=>a.planId===id))await remove('annots',a.id);for(const pg of x.pages){await dbDel('photos',pg.photo);photoCache.delete(pg.photo)}await dbDel('plans',id);S.plans=S.plans.filter(p=>p.id!==id);MD=null;App.closeModal();toast('Plan gelöscht');go(`#/projekt/${x.projectId}/plaene`)};
-async function delPlansOfProject(pid){for(const a of S.annots.filter(a=>a.projectId===pid))await remove('annots',a.id);for(const x of S.plans.filter(x=>x.projectId===pid)){for(const pg of x.pages){await dbDel('photos',pg.photo);photoCache.delete(pg.photo)}await dbDel('plans',x.id)}S.plans=S.plans.filter(x=>x.projectId!==pid)}
+ for(const d of pins){delete d.pin;await save('defects',d)}for(const a of S.annots.filter(a=>a.planId===id))await remove('annots',a.id);for(const pg of x.pages){await dbDel('photos',pg.photo);photoCache.delete(pg.photo)}for(const m of S.photometa.filter(m=>m.own==='plan'&&m.planId===id))await dbDel('photos',m.id);await dbDel('plans',id);S.plans=S.plans.filter(p=>p.id!==id);MD=null;App.closeModal();toast('Plan gelöscht');go(`#/projekt/${x.projectId}/plaene`)};
+async function delPlansOfProject(pid){for(const m of S.photometa.filter(m=>m.own==='plan'&&m.projectId===pid))await dbDel('photos',m.id);for(const a of S.annots.filter(a=>a.projectId===pid))await remove('annots',a.id);for(const x of S.plans.filter(x=>x.projectId===pid)){for(const pg of x.pages){await dbDel('photos',pg.photo);photoCache.delete(pg.photo)}await dbDel('plans',x.id)}S.plans=S.plans.filter(x=>x.projectId!==pid)}
 /* ---- Plan-Ansicht mit Zoom, Pins, Zeichnungen und Reihenbeschriftung ---- */
 const ACOLS=['#e53935','#1e88e5','#43a047','#fb8c00','#8e24aa','#111111'];
 const AWS=[2,4,8];
 let DRAW={tool:'pen',color:'#e53935',w:4,ts:20};
 let ROWC={bf:'',prefix:'R',start:1,step:1,size:'M',rot:0,next:null};
 const RSIZE={S:0.004,M:0.006,L:0.009};
-const MODEQ={pin:'pin',draw:'zeichnen',rows:'reihen'};
+const MODEQ={pin:'pin',draw:'zeichnen',rows:'reihen',foto:'foto',geo:'einmessen'};
 const annsOf=(plid,pg)=>S.annots.filter(a=>a.planId===plid&&(a.page||1)===pg).sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||'')||(a.id<b.id?-1:1));
 const natSort=(a,b)=>String(a).localeCompare(String(b),'de',{numeric:true});
 const bfsOf=pid=>[...new Set([...S.annots.filter(a=>a.type==='row'&&a.projectId===pid).map(a=>a.baufeld),...S.defects.filter(d=>d.projectId===pid).map(d=>d.baufeld)].filter(Boolean))].sort(natSort);
@@ -700,36 +731,38 @@ function annSvg(plid,pg,W,H,selId){const l=annsOf(plid,pg);if(!l.length)return '
  return `<svg class="ann" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">${l.filter(a=>a.type!=='row').map(a=>annEl(a,W,H)).join('')}${l.filter(a=>a.type==='row').map(a=>annEl(a,W,H)).join('')}${sel}</svg>`}
 function viewPlan(p,plid,q){const pl=S.plans.find(x=>x.id===plid&&x.projectId===p.id);if(!pl)return notFound();
  const n=pl.pages.length,pg=Math.min(Math.max(1,parseInt(q.get('s'),10)||1),n);const mq=q.get('modus')||'';const assign=mq==='verorten'?(q.get('d')||''):'';
- const mode=assign||mq==='pin'?'pin':mq==='zeichnen'?'draw':mq==='reihen'?'rows':'';
+ const mode=assign||mq==='pin'?'pin':mq==='zeichnen'?'draw':mq==='reihen'?'rows':mq==='foto'?'foto':mq==='einmessen'?'geo':'';
  setHeader(pl.name,`#/projekt/${p.id}/plaene`,`<button class="hbtn" onclick="App.planEdit('${pl.id}')">Details</button>`);
- afterRender=()=>pvInit(pl,pg,{focus:q.get('f')||'',assign,mode});
+ afterRender=()=>pvInit(pl,pg,{focus:q.get('f')||'',assign,mode,ph:q.get('ph')||'',place:q.get('platzieren')||''});
  const bfs=bfsOf(p.id);
- return `<div class="pvbar">${n>1?`<button class="btn sm sec" onclick="App.pvPage(-1)" ${pg<=1?'disabled':''} aria-label="Vorherige Seite">‹</button><select class="pvsel" onchange="App.pvPage(0,this.value)" aria-label="Seite">${pl.pages.map((_,i)=>`<option value="${i+1}" ${i+1===pg?'selected':''}>Seite ${i+1} / ${n}</option>`).join('')}</select><button class="btn sm sec" onclick="App.pvPage(1)" ${pg>=n?'disabled':''} aria-label="Nächste Seite">›</button>`:''}<button class="btn sm sec" id="pvPinBtn" onclick="App.pvMode('pin')">📍 Mangel</button><button class="btn sm sec" id="pvDrawBtn" onclick="App.pvMode('draw')">✏️ Zeichnen</button><button class="btn sm sec" id="pvRowBtn" onclick="App.pvMode('rows')">🔢 Reihen</button><button class="btn sm sec" onclick="App.pvZoom(1.6)" aria-label="Vergrößern">＋</button><button class="btn sm sec" onclick="App.pvZoom(1/1.6)" aria-label="Verkleinern">－</button><button class="btn sm sec" onclick="App.pvFit()">⤢ Ganz</button></div>
+ return `<div class="pvbar">${n>1?`<button class="btn sm sec" onclick="App.pvPage(-1)" ${pg<=1?'disabled':''} aria-label="Vorherige Seite">‹</button><select class="pvsel" onchange="App.pvPage(0,this.value)" aria-label="Seite">${pl.pages.map((_,i)=>`<option value="${i+1}" ${i+1===pg?'selected':''}>Seite ${i+1} / ${n}</option>`).join('')}</select><button class="btn sm sec" onclick="App.pvPage(1)" ${pg>=n?'disabled':''} aria-label="Nächste Seite">›</button>`:''}<button class="btn sm sec" id="pvPinBtn" onclick="App.pvMode('pin')">📍 Mangel</button><button class="btn sm sec" id="pvDrawBtn" onclick="App.pvMode('draw')">✏️ Zeichnen</button><button class="btn sm sec" id="pvRowBtn" onclick="App.pvMode('rows')">🔢 Reihen</button><button class="btn sm sec" id="pvPhBtn" onclick="App.pvMode('foto')">📷 Foto platzieren</button><button class="btn sm sec" id="pvGeoBtn" onclick="App.pvMode('geo')">🌐 Einmessen${pageGeo(pl,pg)?' ✓':''}</button><button class="btn sm sec" onclick="App.pvZoom(1.6)" aria-label="Vergrößern">＋</button><button class="btn sm sec" onclick="App.pvZoom(1/1.6)" aria-label="Verkleinern">－</button><button class="btn sm sec" onclick="App.pvFit()">⤢ Ganz</button></div>
  <div class="pvtools hidden" id="pvTools"><div class="tgrp">${[['pan','✋','Verschieben'],['select','⬚','Auswählen / verschieben'],['pen','✏️','Stift'],['hl','🖍️','Marker'],['arrow','➚','Pfeil'],['circle','◯','Kreis'],['rect','▭','Rechteck'],['text','T','Text']].map(([k,i,l])=>`<button class="tbtn" data-tool="${k}" onclick="App.drTool('${k}')" title="${l}" aria-label="${l}">${i}</button>`).join('')}</div>
   <div class="tgrp">${ACOLS.map(c=>`<button class="cbtn" data-col="${c}" style="background:${c}" onclick="App.drCol('${c}')" aria-label="Farbe ${c}"></button>`).join('')}</div>
   <div class="tgrp">${AWS.map((w,i)=>`<button class="tbtn" data-w="${w}" onclick="App.drW(${w})" title="Strich ${['dünn','mittel','dick'][i]}" aria-label="Strich ${['dünn','mittel','dick'][i]}"><i class="wdot" style="width:${w+4}px;height:${w+4}px"></i></button>`).join('')}</div>
   <div class="tgrp"><button class="tbtn bUndo" onclick="App.pvUndo()" title="Rückgängig" aria-label="Rückgängig">↶</button><button class="tbtn bRedo" onclick="App.pvRedo()" title="Wiederholen" aria-label="Wiederholen">↷</button><button class="tbtn" id="bDel" onclick="App.annDelSel()" title="Auswahl löschen" aria-label="Auswahl löschen">🗑</button><button class="tbtn hidden" id="bTxt" onclick="App.annEditText()" title="Text ändern" aria-label="Text ändern">✎</button></div></div>
  <div class="pvtools hidden" id="pvRows"><div class="rgrid"><label>Baufeld<input id="rBf" list="bflist" oninput="App.rowCfg('bf',this.value)" placeholder="z. B. BF 12"></label><label>Präfix<input id="rPre" oninput="App.rowCfg('prefix',this.value)" placeholder="z. B. R"></label><label>Start<input id="rStart" type="number" inputmode="numeric" onchange="App.rowCfg('start',this.value)"></label><label>Schritt<input id="rStep" type="number" inputmode="numeric" onchange="App.rowCfg('step',this.value)"></label><label>Größe<select id="rSize" onchange="App.rowCfg('size',this.value)">${[['S','klein'],['M','mittel'],['L','groß']].map(x=>opt(x,'')).join('')}</select></label><label>Drehung<select id="rRot" onchange="App.rowCfg('rot',this.value)">${[['0','waagerecht'],['-90','senkrecht ↑'],['90','senkrecht ↓'],['-45','schräg ↗'],['45','schräg ↘']].map(x=>opt(x,'')).join('')}</select></label></div>
   <div class="tgrp"><span class="sm">Nächste Beschriftung: <b id="rowNext">–</b></span><button class="tbtn bUndo" onclick="App.pvUndo()" title="Rückgängig" aria-label="Rückgängig">↶</button><button class="tbtn bRedo" onclick="App.pvRedo()" title="Wiederholen" aria-label="Wiederholen">↷</button></div>${datalist('bflist',bfs)}</div>
+ ${pvFotoPanel()}${pvGeoPanel()}${pvFiltBar(p)}
  <div class="hint hidden" id="pvHint"></div>
- <div class="pvstage" id="pvStage"><div class="pvcont" id="pvCont"><img id="pvImg" data-photo="${pl.pages[pg-1].photo}" alt="Plan" draggable="false"><div class="annwrap" id="pvAnn"></div><div class="annwrap" id="pvTmp"></div><div id="pvPins"></div></div></div>
- <div class="sm mut" style="margin:6px 2px">${[pl.number&&'Plan-Nr. '+pl.number,pl.revision&&'Index '+pl.revision,pl.date&&fmtD(pl.date),pl.category].filter(Boolean).map(esc).join(' · ')}${pl.number||pl.revision||pl.date||pl.category?' · ':''}Zoomen: zwei Finger / Mausrad · Verschieben: ziehen</div>${pinLegend()}
+ <div class="pvstage" id="pvStage"><div class="pvcont" id="pvCont"><img id="pvImg" data-photo="${pl.pages[pg-1].photo}" alt="Plan" draggable="false"><div class="annwrap" id="pvAnn"></div><div class="annwrap" id="pvTmp"></div><div id="pvGeo"></div><div id="pvPh"></div><div id="pvPins"></div></div></div>
+ <div class="sm mut" style="margin:6px 2px">${[pl.number&&'Plan-Nr. '+pl.number,pl.revision&&'Index '+pl.revision,pl.date&&fmtD(pl.date),pl.category].filter(Boolean).map(esc).join(' · ')}${pl.number||pl.revision||pl.date||pl.category?' · ':''}Zoomen: zwei Finger / Mausrad · Verschieben: ziehen</div>${pinLegend()}<div class="pleg"><span><i class="cpdot"></i>📷 Foto (GPS)</span><span><i class="cpdot man"></i>📷 Foto (manuell)</span><span><i class="cpdot clu"></i>Fotogruppe – antippen zum Vergrößern</span></div>
  <div id="pvList"></div>`}
-function pvApply(){const v=PV;if(!v)return;v.ct.style.transform=`translate(${v.tx}px,${v.ty}px) scale(${v.s})`;v.ct.style.setProperty('--is',(1/v.s).toFixed(5))}
+function pvApply(){const v=PV;if(!v)return;v.ct.style.transform=`translate(${v.tx}px,${v.ty}px) scale(${v.s})`;v.ct.style.setProperty('--is',(1/v.s).toFixed(5));pvScaleHook()}
 function pvFitScale(){const r=PV.st.getBoundingClientRect();return Math.min(r.width/PV.w,r.height/PV.h)}
 function pvFit(){const v=PV;const r=v.st.getBoundingClientRect();v.s=pvFitScale();v.tx=(r.width-v.w*v.s)/2;v.ty=(r.height-v.h*v.s)/2;pvApply()}
 function pvZoomAt(f,cx,cy){const v=PV;const fit=pvFitScale();const ns=Math.min(Math.max(v.s*f,fit*0.5),Math.max(4,fit));const k=ns/v.s;v.tx=cx-(cx-v.tx)*k;v.ty=cy-(cy-v.ty)*k;v.s=ns;pvApply()}
 function pvInit(pl,pg,o){const st=$('#pvStage'),ct=$('#pvCont'),img=$('#pvImg');if(!st)return;const P=pl.pages[pg-1];const w=P.w||img.naturalWidth||1000,h=P.h||img.naturalHeight||700;
  ct.style.width=w+'px';ct.style.height=h+'px';
- const v=PV={pl,pg,w,h,s:1,tx:0,ty:0,mode:o.mode||'',assign:o.assign,focus:o.focus,pts:new Map(),st,ct,down:null,pinch:null,act:null,sel:'',undo:[],redo:[],txtAt:null};
+ const v=PV={pl,pg,w,h,s:1,tx:0,ty:0,mode:o.mode||'',assign:o.assign,focus:o.focus,pts:new Map(),st,ct,down:null,pinch:null,act:null,sel:'',undo:[],redo:[],txtAt:null,focusPh:o.ph||'',placePh:o.place||'',placeQ:[],geoRe:null,phAll:[],phVis:[]};PVSC=0;
  if(v.mode==='rows')rowsEnter();
- pvFit();pvModeUI();pvPins();pvAnn();const fd=o.focus&&S.defects.find(d=>d.id===o.focus&&d.pin&&d.pin.planId===pl.id);if(fd)pvFocusOn(fd);
+ pvFit();pvModeUI();pvPins();pvAnn();pvGeoLayer();pvGeoInfo();pvFotoInfo();PVSC=v.s;pvPhotoPins();const fd=o.focus&&S.defects.find(d=>d.id===o.focus&&d.pin&&d.pin.planId===pl.id);if(fd)pvFocusOn(fd);
+ if(o.ph){const fp=v.phAll.find(p=>p.m.id===o.ph);if(fp){if(!PHF.show||!phFilt([fp]).length)PHF={show:true,von:'',bis:'',day:''};const r=st.getBoundingClientRect();v.s=Math.max(v.s,Math.min(pvFitScale()*5,1));v.tx=r.width/2-fp.x*w*v.s;v.ty=r.height/2-fp.y*h*v.s;pvApply();PVSC=v.s;pvPhotoPins()}}
  const loc=e=>{const r=st.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}};
  const pinchState=()=>{const [a,b]=[...v.pts.values()];return {d:Math.hypot(a.x-b.x,a.y-b.y)||1,mx:(a.x+b.x)/2,my:(a.y+b.y)/2,s:v.s,tx:v.tx,ty:v.ty}};
  st.addEventListener('wheel',e=>{e.preventDefault();const p=loc(e);pvZoomAt(Math.exp(-e.deltaY*(e.deltaMode?0.05:0.0016)),p.x,p.y)},{passive:false});
  st.addEventListener('dblclick',e=>{if(v.mode)return;const p=loc(e);pvZoomAt(2,p.x,p.y)});
  st.addEventListener('pointerdown',e=>{if(e.button>0)return;const p=loc(e);v.pts.set(e.pointerId,p);
-  if(v.pts.size===1){const pe=e.target.closest&&e.target.closest('.pin');v.down={x:p.x,y:p.y,t:Date.now(),pin:pe?pe.dataset.id:'',moved:false};v.act=(v.mode==='draw'||v.mode==='rows')&&!pe?actStart(p):null}
+  if(v.pts.size===1){const pe=e.target.closest&&e.target.closest('.pin');const ce=!pe&&e.target.closest&&e.target.closest('.cpin');v.down={x:p.x,y:p.y,t:Date.now(),pin:pe?pe.dataset.id:'',cp:ce?ce.dataset.ph:'',moved:false};v.act=(v.mode==='draw'||v.mode==='rows')&&!pe?actStart(p):(v.mode==='foto'&&ce&&!ce.classList.contains('clu'))?{k:'cpin',id:ce.dataset.ph,el:ce,start:p,moved:false}:null}
   else{if(v.act){actCancel(v.act);v.act=null}if(v.down)v.down.moved=true;v.pinch=pinchState()}
   try{st.setPointerCapture(e.pointerId)}catch(_){}});
  st.addEventListener('pointermove',e=>{const old=v.pts.get(e.pointerId);if(!old)return;const p=loc(e);v.pts.set(e.pointerId,p);
@@ -738,8 +771,8 @@ function pvInit(pl,pg,o){const st=$('#pvStage'),ct=$('#pvCont'),img=$('#pvImg');
    if(v.act)actMove(p);else if(!v.down||v.down.moved){v.tx+=p.x-old.x;v.ty+=p.y-old.y;pvApply()}}});
  const up=e=>{if(!v.pts.has(e.pointerId))return;v.pts.delete(e.pointerId);if(v.pts.size<2)v.pinch=null;if(v.pts.size>=2)v.pinch=pinchState();
   if(v.pts.size===0&&v.down){const d=v.down;v.down=null;const act=v.act;v.act=null;const isTap=e.type==='pointerup'&&!d.moved&&Date.now()-d.t<700;
-   if(act){if(e.type!=='pointerup'){actCancel(act);return}if(act.k==='move'&&act.tap&&!act.moved&&isTap)return rowPopup(act.o.id);actEnd(act);if(act.k!=='none')return}
-   if(isTap)pvTap(e,d.pin)}};
+   if(act){if(e.type!=='pointerup'){actCancel(act);return}if(act.k==='move'&&act.tap&&!act.moved&&isTap)return rowPopup(act.o.id);if(act.k==='cpin'&&!act.moved){if(isTap)photoPinPopup(act.id);return}actEnd(act);if(act.k!=='none')return}
+   if(isTap){if(d.cp&&!d.pin&&v.mode!=='draw')return cpinTap(d.cp);pvTap(e,d.pin)}}};
  st.addEventListener('pointerup',up);st.addEventListener('pointercancel',up);
  st.addEventListener('touchend',e=>{if(e.cancelable)e.preventDefault()},{passive:false}); /* verhindert Geister-Klicks nach dem Antippen */
  if(!window.__pvResize){window.__pvResize=true;let t;window.addEventListener('resize',()=>{clearTimeout(t);t=setTimeout(()=>{if(PV&&document.body.contains(PV.st))pvFit()},150)})}}
@@ -751,12 +784,12 @@ function actStart(p){const v=PV;const q=toPage(p);const tol=12/v.s;
  if(t==='select'){const h=annHit(q.x,q.y,tol);v.sel=h?h.id:'';pvAnn();pvUndoUI();return h?{k:'move',o:h,b:clone(h),start:q,moved:false}:null}
  const r=relPt(q);const o={id:'an_'+uid(),projectId:v.pl.projectId,planId:v.pl.id,page:v.pg,type:t,color:DRAW.color,w:+((t==='hl'?DRAW.w*4:DRAW.w)/v.s/v.w).toFixed(6),pts:[r]};
  if(t!=='pen'&&t!=='hl')o.pts.push(r.slice());return {k:'shape',o}}
-function actMove(p){const v=PV,a=v.act;const q=toPage(p);
+function actMove(p){const v=PV,a=v.act;if(a.k==='cpin')return cpinMove(a,p);const q=toPage(p);
  if(a.k==='shape'){const r=relPt(q);if(a.o.type==='pen'||a.o.type==='hl'){const L=a.o.pts[a.o.pts.length-1];if(Math.hypot((r[0]-L[0])*v.w,(r[1]-L[1])*v.h)*v.s<2.5)return;a.o.pts.push(r)}else a.o.pts[1]=r;
   $('#pvTmp').innerHTML=`<svg class="ann" viewBox="0 0 ${v.w} ${v.h}" preserveAspectRatio="none">${annEl(a.o,v.w,v.h)}</svg>`}
  else if(a.k==='move'){if(!a.moved&&Math.hypot(q.x-a.start.x,q.y-a.start.y)*v.s<8)return;a.moved=true;const dx=(q.x-a.start.x)/v.w,dy=(q.y-a.start.y)/v.h;a.o.pts=a.b.pts.map(pt=>[+(pt[0]+dx).toFixed(5),+(pt[1]+dy).toFixed(5)]);pvAnn()}}
-function actCancel(a){$('#pvTmp').innerHTML='';if(a&&a.k==='move'){a.o.pts=a.b.pts;pvAnn()}}
-async function actEnd(a){const v=PV;$('#pvTmp').innerHTML='';
+function actCancel(a){$('#pvTmp').innerHTML='';if(a&&a.k==='cpin')return pvPhotoPins();if(a&&a.k==='move'){a.o.pts=a.b.pts;pvAnn()}}
+async function actEnd(a){const v=PV;$('#pvTmp').innerHTML='';if(a.k==='cpin')return cpinDrop(a);
  if(a.k==='shape'){const o=a.o,P=o.pts;const ok=(o.type==='pen'||o.type==='hl')?P.length>=2:Math.hypot((P[1][0]-P[0][0])*v.w,(P[1][1]-P[0][1])*v.h)*v.s>=6;if(!ok)return;await annAdd(o);pvAnn();return}
  if(a.k==='move'&&a.moved){await save('annots',a.o);pvRec({a:'mod',b:a.b,o:clone(a.o)});pvAnn()}}
 async function annAdd(o){await save('annots',o);pvRec({a:'add',o:clone(o)})}
@@ -799,14 +832,14 @@ App.rowDel=async(id,ren)=>{const r=S.annots.find(a=>a.id===id);if(!r)return;if(!
  if(ren){const st=r.step||1;for(const a of S.annots.filter(a=>a.type==='row'&&a.planId===r.planId&&a.baufeld===r.baufeld&&+a.num>+r.num)){const b=clone(a);a.num=+a.num-st;await save('annots',a);ops.push({a:'mod',b,o:clone(a)})}}
  pvRec(ops.length>1?{a:'batch',ops}:ops[0]);App.closeModal();pvAnn();rowNextReset();toast(ren&&ops.length>1?`Gelöscht, ${ops.length-1} Reihe(n) neu nummeriert`:'Beschriftung gelöscht')};
 /* Modi, Pins */
-function pvSetMode(m){const v=PV;v.mode=v.mode===m?'':m;if(v.mode!=='pin')v.assign='';v.sel='';if(v.mode==='rows')rowsEnter();pvAnn();pvModeUI();pvUndoUI()}
+function pvSetMode(m){const v=PV;v.mode=v.mode===m?'':m;if(v.mode!=='pin')v.assign='';if(v.mode!=='foto'){v.placePh='';v.placeQ=[]}v.geoRe=null;v.sel='';if(v.mode==='rows')rowsEnter();pvAnn();pvModeUI();pvUndoUI();pvGeoLayer();pvGeoInfo();pvFotoInfo();pvPhotoPins()}
 App.pvMode=m=>pvSetMode(m);
 App.pvPinMode=()=>pvSetMode('pin');
 function pvModeUI(){const v=PV;if(!v)return;const m=v.mode;
- [['#pvPinBtn','pin'],['#pvDrawBtn','draw'],['#pvRowBtn','rows']].forEach(([id,k])=>{const b=$(id);if(b)b.classList.toggle('sec',m!==k)});
+ [['#pvPinBtn','pin'],['#pvDrawBtn','draw'],['#pvRowBtn','rows'],['#pvPhBtn','foto'],['#pvGeoBtn','geo']].forEach(([id,k])=>{const b=$(id);if(b)b.classList.toggle('sec',m!==k)});$('#pvFoto').classList.toggle('hidden',m!=='foto');$('#pvGeoP').classList.toggle('hidden',m!=='geo');
  $('#pvTools').classList.toggle('hidden',m!=='draw');$('#pvRows').classList.toggle('hidden',m!=='rows');v.st.classList.toggle('pinmode',!!m);v.st.classList.toggle('drawmode',m==='draw'&&DRAW.tool!=='pan'&&DRAW.tool!=='select');
  const h=$('#pvHint');const d=v.assign&&S.defects.find(x=>x.id===v.assign);
- h.textContent=m==='pin'?(d?`Tippe auf die Stelle im Plan, an der Mangel #${d.nr} „${d.title}“ liegt.`:'Tippe auf die Stelle im Plan, an der der Mangel liegt.'):m==='draw'?'Ein Finger zeichnet · zwei Finger verschieben/zoomen · am PC: Mausrad zoomt, ✋ verschiebt · ⬚ wählt aus (ziehen = verschieben)':m==='rows'?'Reihen nacheinander antippen – die Nummer zählt automatisch hoch. Beschriftung ziehen = verschieben, antippen = Optionen (z. B. Mangel anlegen).':'';
+ h.textContent=m==='pin'?(d?`Tippe auf die Stelle im Plan, an der Mangel #${d.nr} „${d.title}“ liegt.`:'Tippe auf die Stelle im Plan, an der der Mangel liegt.'):m==='draw'?'Ein Finger zeichnet · zwei Finger verschieben/zoomen · am PC: Mausrad zoomt, ✋ verschiebt · ⬚ wählt aus (ziehen = verschieben)':m==='rows'?'Reihen nacheinander antippen – die Nummer zählt automatisch hoch. Beschriftung ziehen = verschieben, antippen = Optionen (z. B. Mangel anlegen).':m==='foto'?(v.placePh?'Tippe auf die Stelle, an der das Foto aufgenommen wurde.':'Stelle antippen = Foto dort aufnehmen/hochladen/zuordnen · 📷-Pin ziehen = verschieben, antippen = Details'):m==='geo'?'Plan einmessen: Punkte im Plan antippen und deren Koordinaten eingeben.':'';
  h.classList.toggle('hidden',!m);
  document.querySelectorAll('#pvTools [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===DRAW.tool));document.querySelectorAll('#pvTools [data-col]').forEach(b=>b.classList.toggle('on',b.dataset.col===DRAW.color));document.querySelectorAll('#pvTools [data-w]').forEach(b=>b.classList.toggle('on',+b.dataset.w===DRAW.w));pvUndoUI()}
 function pvPins(){const v=PV;if(!v)return;const l=S.defects.filter(d=>d.pin&&d.pin.planId===v.pl.id&&(d.pin.page||1)===v.pg).sort((a,b)=>a.nr-b.nr);
@@ -817,6 +850,8 @@ function pvTap(e,pinId){const v=PV;const m=v.mode;const r=v.st.getBoundingClient
  if(m==='draw'){if(DRAW.tool==='text'&&inside){v.txtAt=[+x.toFixed(5),+y.toFixed(5)];annTextModal('')}return}
  if(!inside)return toast('Bitte innerhalb des Plans tippen');
  if(m==='rows')return rowCreate(x,y);
+ if(m==='foto')return pvFotoTap(x,y);
+ if(m==='geo')return pvGeoTap(x,y,px,py);
  const pin={planId:v.pl.id,page:v.pg,x:+x.toFixed(5),y:+y.toFixed(5)};if(v.assign)return pvAssign(v.assign,pin);pvChooseModal(pin)}
 function pvDefRows(q){const pid=PV.pl.projectId;q=lc(q);const l=S.defects.filter(d=>d.projectId===pid).sort((a,b)=>(ACTIVE_D.includes(b.status)-ACTIVE_D.includes(a.status))||b.nr-a.nr);
  return l.filter(d=>!q||lc('#'+d.nr+' '+d.title+' '+d.location+' '+d.firma+' '+bfr(d)).includes(q)).slice(0,80).map(d=>`<div class="row" onclick="App.pvAssignPick('${d.id}')"><span class="pdot" style="background:${pinCol(d)}"></span><div class="grow"><div class="rt ell">#${d.nr} ${esc(d.title)}</div><div class="mut sm ell">${esc([bfr(d),d.location,d.firma].filter(Boolean).join(' · '))}${d.pin?' · 📍 schon verortet (wird verschoben)':''}</div></div>${statusBadge(d.status)}</div>`).join('')||'<div class="empty">Keine Mängel gefunden.</div>'}
@@ -849,6 +884,209 @@ App.defPlan=async mode=>{const d=DRAFT;if(!(d.title||'').trim())return toast('Bi
 function rptPlans(l){const groups=new Map();for(const d of l){if(!d.pin)continue;const pl=S.plans.find(x=>x.id===d.pin.planId);if(!pl)continue;const k=pl.id+'|'+(d.pin.page||1);if(!groups.has(k))groups.set(k,{pl,page:d.pin.page||1,ds:[]});groups.get(k).ds.push(d)}
  if(!groups.size)return '';return `<h2>Pläne mit Mangel-Verortung</h2>`+[...groups.values()].map(g=>{const P=g.pl.pages[g.page-1];if(!P)return '';return `<section class="r-plan"><h4>${esc(g.pl.name)}${g.pl.revision?' · Index '+esc(g.pl.revision):''}${g.pl.pages.length>1?' · Seite '+g.page:''}</h4><div class="r-planimg"><img data-photo="${P.photo}" alt="Plan"><div class="annwrap">${annSvg(g.pl.id,g.page,P.w,P.h)}</div>${g.ds.map(d=>`<div class="pin" style="left:${(d.pin.x*100).toFixed(4)}%;top:${(d.pin.y*100).toFixed(4)}%;--c:${pinCol(d)}"><i></i><span>${d.nr}</span></div>`).join('')}</div><div class="r-pleg">Mängel: ${g.ds.map(d=>`<b style="color:${pinCol(d)}">#${d.nr}</b> ${esc(d.title)}${bfr(d)?' ('+esc(bfr(d))+')':''}`).join(' · ')}</div></section>`}).join('')+`<div class="r-pleg">Farben: ${DSTAT.map(s=>`<b style="color:${PIN_COL[s]}">●</b> ${s}`).join('  ')}</div>`}
 
+/* ================= Foto-Verortung & Plan einmessen (v1.3) ================= */
+let PHF={show:true,von:'',bis:'',day:''},GEOF={kind:'auto'},PH_TMP=null,PLACER=null,GEO_TMP=null;
+const pmOf=id=>S.photometa.find(m=>m.id===id);
+/* ---- EXIF (JPEG APP1) – liest GPS, Blickrichtung und Aufnahmezeit vor dem Verkleinern ---- */
+function exifRead(buf){try{const v=new DataView(buf);if(v.byteLength<12||v.getUint16(0)!==0xFFD8)return null;let o=2;const L=v.byteLength;
+ while(o+4<L){const mk=v.getUint16(o);if((mk&0xFF00)!==0xFF00)break;if(mk===0xFFD8||(mk>=0xFFD0&&mk<=0xFFD7)){o+=2;continue}const len=v.getUint16(o+2);
+  if(mk===0xFFE1&&o+10<L&&v.getUint32(o+4)===0x45786966)return exifTiff(v,o+10);
+  if(mk===0xFFDA)break;o+=2+len}}catch(e){}return null}
+function exifTiff(v,t){const le=v.getUint16(t)===0x4949;const u16=p=>v.getUint16(p,le),u32=p=>v.getUint32(p,le);if(u16(t+2)!==42)return null;
+ const SZ={1:1,2:1,3:2,4:4,5:8,7:1,9:4,10:8};
+ const ifd=off=>{const m={};const p=t+off;if(!off||p+2>v.byteLength)return m;const n=u16(p);for(let i=0;i<n&&i<500;i++){const e=p+2+i*12;if(e+12>v.byteLength)break;m[u16(e)]={type:u16(e+2),cnt:u32(e+4),vo:e+8}}return m};
+ const dp=en=>((SZ[en.type]||1)*en.cnt<=4)?en.vo:t+u32(en.vo);
+ const rat=(en,i=0)=>{const p=dp(en)+i*8;const a=u32(p),b=u32(p+4);return b?a/b:NaN};
+ const str=en=>{const p=dp(en);let s='';for(let i=0;i<en.cnt&&i<100;i++){const c=v.getUint8(p+i);if(!c)break;s+=String.fromCharCode(c)}return s.trim()};
+ const r={};const i0=ifd(u32(t+4));
+ if(i0[0x10F])r.make=str(i0[0x10F]);if(i0[0x110])r.model=str(i0[0x110]);
+ if(i0[0x8769]){const ex=ifd(u32(i0[0x8769].vo));const d=ex[0x9003]||ex[0x9004];if(d)r.taken=str(d)}
+ if(!r.taken&&i0[0x132])r.taken=str(i0[0x132]);
+ if(r.taken){const m=r.taken.match(/^(\d{4}):(\d\d):(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/);r.taken=m&&m[1]!=='0000'?`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]||'00'}`:''}
+ if(i0[0x8825]){const g=ifd(u32(i0[0x8825].vo));
+  if(g[2]&&g[4]&&g[2].cnt>=3&&g[4].cnt>=3){const dms=en=>rat(en,0)+rat(en,1)/60+rat(en,2)/3600;let lat=dms(g[2]),lon=dms(g[4]);
+   const ref=k=>g[k]?String.fromCharCode(v.getUint8(dp(g[k]))):'';if(ref(1)==='S')lat=-lat;if(ref(3)==='W')lon=-lon;
+   if(isFinite(lat)&&isFinite(lon)&&!(lat===0&&lon===0)&&Math.abs(lat)<=90&&Math.abs(lon)<=180){r.lat=+lat.toFixed(7);r.lon=+lon.toFixed(7);
+    if(g[6]){let a=rat(g[6]);if(g[5]&&v.getUint8(dp(g[5]))===1)a=-a;if(isFinite(a))r.alt=+a.toFixed(1)}
+    if(g[0x11]){const d=rat(g[0x11]);if(isFinite(d))r.dir=+(((d%360)+360)%360).toFixed(1)}
+    if(g[0x1F]){const h=rat(g[0x1F]);if(isFinite(h)&&h>0)r.hpe=+h.toFixed(1)}}}}
+ return r}
+/* ---- Koordinaten ---- */
+const D2R=Math.PI/180,GR=6378137;
+const GE2=0.00669438;function gRad(lat){const s=Math.sin(lat*D2R),w=1-GE2*s*s;return [GR/Math.sqrt(w)*Math.cos(lat*D2R),GR*(1-GE2)/Math.pow(w,1.5)]} /* Querkrümmung·cosφ, Meridiankrümmung (GRS80) */
+function enu(lat,lon,o){const r=gRad(o[0]);return [(lon-o[1])*D2R*r[0],(lat-o[0])*D2R*r[1]]}
+function unenu(e,n,o){const r=gRad(o[0]);return [o[0]+n/r[1]/D2R,o[1]+e/r[0]/D2R]}
+function utm2ll(E,N,zone=32){const a=6378137,f=1/298.257222101,e2=f*(2-f),k0=0.9996,ep2=e2/(1-e2);const x=E-500000,M=N/k0;
+ const mu=M/(a*(1-e2/4-3*e2*e2/64-5*e2**3/256));const e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+ const p1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+ const s=Math.sin(p1),c=Math.cos(p1),tn=Math.tan(p1);const N1=a/Math.sqrt(1-e2*s*s),T1=tn*tn,C1=ep2*c*c,R1=a*(1-e2)/Math.pow(1-e2*s*s,1.5),D=x/(N1*k0);
+ const lat=p1-(N1*tn/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+ const lon=(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/c;return [lat/D2R,zone*6-183+lon/D2R]}
+function parseCoord(s){s=String(s||'').trim().replace(/[\u2032\u2019`´]/g,"'").replace(/[\u2033\u201D\u201C]/g,'"').replace(/''/g,'"');if(!s)return null;const num=x=>+String(x).replace(',','.');
+ let m=s.match(/^(?:(3[23])\s*[A-Z]?\s+)?(\d{6}(?:[.,]\d+)?)\s*(?:m\s*)?(?:E|O|Ost|R\w*)?\s*[,;/\s]\s*(\d{7}(?:[.,]\d+)?)\s*(?:m\s*)?(?:N|Nord|H\w*)?$/i);
+ if(m){const z=+(m[1]||32);const ll=utm2ll(num(m[2]),num(m[3]),z);return {lat:+ll[0].toFixed(7),lon:+ll[1].toFixed(7),src:'UTM '+z+'N'}}
+ const dm=[...s.matchAll(/(\d{1,3})\s*°\s*(?:(\d{1,2}(?:[.,]\d+)?)\s*')?\s*(?:(\d{1,2}(?:[.,]\d+)?)\s*")?\s*([NSEWO])/gi)];
+ if(dm.length===2){const val=x=>{const v=+x[1]+(x[2]?num(x[2])/60:0)+(x[3]?num(x[3])/3600:0);return /[SW]/i.test(x[4])?-v:v};let a=dm[0],b=dm[1];if(/[EWO]/i.test(a[4]))[a,b]=[b,a];const lat=val(a),lon=val(b);if(Math.abs(lat)<=90&&Math.abs(lon)<=180)return {lat:+lat.toFixed(7),lon:+lon.toFixed(7),src:'Grad/Min/Sek'}}
+ m=s.match(/(-?\d{1,2}[.,]\d{3,})\s*°?\s*([NS])?\s*[,;/\s]\s*(-?\d{1,3}[.,]\d{3,})\s*°?\s*([EWO])?/i);
+ if(m){let lat=num(m[1]),lon=num(m[3]);if(/S/i.test(m[2]||''))lat=-lat;if(/W/i.test(m[4]||''))lon=-lon;if(Math.abs(lat)<=90&&Math.abs(lon)<=180)return {lat,lon,src:'Dezimalgrad'}}
+ return null}
+const fmtLL=(lat,lon)=>`${(+lat).toFixed(6)}, ${(+lon).toFixed(6)}`;
+const fmtM=m=>m==null||!isFinite(m)?'–':(m<10?m.toFixed(1):Math.round(m)).toString().replace('.',',')+' m';
+/* ---- Transformation Plan ↔ Gelände: 2 Punkte = maßstabstreu (Ähnlichkeit), ab 3 Punkten affin (kleinste Quadrate) ---- */
+function geoFit(pts,W,H,kind='auto'){const n=pts.length;if(n<2)return null;const o=[pts.reduce((s,p)=>s+p.lat,0)/n,pts.reduce((s,p)=>s+p.lon,0)/n];
+ const P=pts.map(p=>({X:p.x*W,Y:p.y*H,w:enu(p.lat,p.lon,o)}));const cx=P.reduce((s,p)=>s+p.X,0)/n,cy=P.reduce((s,p)=>s+p.Y,0)/n,ce=P.reduce((s,p)=>s+p.w[0],0)/n,cn=P.reduce((s,p)=>s+p.w[1],0)/n;
+ const sim=()=>{let ss=0,sa=0,sb=0;for(const p of P){const px=p.X-cx,py=-(p.Y-cy),qx=p.w[0]-ce,qy=p.w[1]-cn;ss+=px*px+py*py;sa+=px*qx+py*qy;sb+=px*qy-py*qx}if(ss<1e-9)return null;const a=sa/ss,b=sb/ss;return [a,b,ce-a*cx-b*cy,b,-a,cn-b*cx+a*cy]};
+ const aff=()=>{let sxx=0,sxy=0,syy=0,sxe=0,sye=0,sxn=0,syn=0;for(const p of P){const x=p.X-cx,y=p.Y-cy,e=p.w[0]-ce,nn=p.w[1]-cn;sxx+=x*x;sxy+=x*y;syy+=y*y;sxe+=x*e;sye+=y*e;sxn+=x*nn;syn+=y*nn}
+  const det=sxx*syy-sxy*sxy;if(Math.abs(det)<1e-9*Math.max(1,sxx*syy))return null;const A=(sxe*syy-sye*sxy)/det,B=(sye*sxx-sxe*sxy)/det,D=(sxn*syy-syn*sxy)/det,E=(syn*sxx-sxn*sxy)/det;return [A,B,ce-A*cx-B*cy,D,E,cn-D*cx-E*cy]};
+ let k=kind==='sim'||n<3?'sim':'aff',T=k==='aff'?aff():sim(),warn='';if(k==='aff'&&!T){T=sim();k='sim';warn='Punkte liegen (fast) auf einer Linie – maßstabstreue Berechnung verwendet. Bitte Punkte weiter verteilt setzen.'}if(!T)return null;
+ const det=T[0]*T[4]-T[1]*T[3];if(Math.abs(det)<1e-12)return null;
+ const fw=(X,Y)=>[T[0]*X+T[1]*Y+T[2],T[3]*X+T[4]*Y+T[5]];const res=P.map(p=>{const q=fw(p.X,p.Y);return Math.hypot(q[0]-p.w[0],q[1]-p.w[1])});
+ const dof=n-(k==='aff'?3:2);const rms=dof>0?Math.sqrt(res.reduce((s,r)=>s+r*r,0)/dof):null;
+ let chk=null;if(k==='aff'&&n===3){const S2=sim();if(S2){const r2=P.map(p=>Math.hypot(S2[0]*p.X+S2[1]*p.Y+S2[2]-p.w[0],S2[3]*p.X+S2[4]*p.Y+S2[5]-p.w[1]));chk=Math.sqrt(r2.reduce((s,r)=>s+r*r,0)/1)}}
+ const mpp=Math.sqrt(Math.abs(det));const sx=Math.hypot(T[0],T[3]),sy=Math.hypot(T[1],T[4]);
+ return {o:[+o[0].toFixed(8),+o[1].toFixed(8)],T:T.map(x=>+x.toPrecision(12)),kind:k,W,H,n,res:res.map(r=>+r.toFixed(3)),rms:rms==null?null:+rms.toFixed(3),chk:chk==null?null:+chk.toFixed(3),mpp:+mpp.toPrecision(6),aniso:+(Math.abs(sx-sy)/Math.max(sx,sy)).toFixed(4),warn}}
+function geoToPlan(g,lat,lon){const T=g.T;const [e,n]=enu(lat,lon,g.o);const det=T[0]*T[4]-T[1]*T[3];const de=e-T[2],dn=n-T[5];const X=(T[4]*de-T[1]*dn)/det,Y=(-T[3]*de+T[0]*dn)/det;return [X/g.W,Y/g.H]}
+function planToGeo(g,x,y){const T=g.T,X=x*g.W,Y=y*g.H;return unenu(T[0]*X+T[1]*Y+T[2],T[3]*X+T[4]*Y+T[5],g.o)}
+function geoDirAngle(g,deg){const T=g.T;const det=T[0]*T[4]-T[1]*T[3];const e=Math.sin(deg*D2R),n=Math.cos(deg*D2R);const X=(T[4]*e-T[1]*n)/det,Y=(-T[3]*e+T[0]*n)/det;return Math.atan2(Y,X)/D2R+90} /* Bildschirmwinkel, 0 = nach oben */
+const pageGeo=(pl,pg)=>{const P=pl&&pl.pages[pg-1];return P&&P.geo&&P.geo.T?P.geo:null};
+/* ---- Eigentümer (Tagebuch / Mangel / Protokoll / Plan-Foto) ---- */
+function photoOwners(){const m=new Map();for(const e of S.diary)for(const id of e.photos||[])m.set(id,{k:'tagebuch',pid:e.projectId,label:'Bautagebuch '+fmtD(e.date),date:e.date,href:`#/projekt/${e.projectId}/tagebuch/${e.id}`});
+ for(const d of S.defects)for(const id of d.photos||[])if(!m.has(id))m.set(id,{k:'mangel',pid:d.projectId,label:'Mangel #'+d.nr+' '+(d.title||''),date:d.foundAt||'',href:`#/projekt/${d.projectId}/mangel/${d.id}`});
+ for(const x of S.protocols)for(const id of x.photos||[])if(!m.has(id))m.set(id,{k:'protokoll',pid:x.projectId,label:'Protokoll '+(x.title||'')+' '+fmtD(x.date),date:x.date,href:`#/projekt/${x.projectId}/protokoll/${x.id}`});
+ for(const pm of S.photometa)if(pm.own==='plan'&&!m.has(pm.id)){const pl=S.plans.find(p=>p.id===pm.planId);m.set(pm.id,{k:'plan',pid:pm.projectId,label:'Plan-Foto'+(pl?' – '+pl.name:''),date:(pm.taken||pm.createdAt||'').slice(0,10),href:pl?`#/projekt/${pl.projectId}/plan/${pl.id}?ph=${pm.id}`:''})}
+ return m}
+const phDate=(m,ow)=>(m.taken||'').slice(0,10)||(ow&&ow.date)||(m.createdAt||'').slice(0,10);
+function photoPinsFor(pl,pg,own){const geo=pageGeo(pl,pg);const out=[];own=own||photoOwners();
+ for(const m of S.photometa){const ow=own.get(m.id);if(!ow)continue;if((m.projectId||ow.pid)!==pl.projectId)continue;
+  const man=(m.pins||[]).find(p=>p.planId===pl.id&&(p.page||1)===pg);
+  if(man){if(man.hidden)continue;out.push({m,ow,x:man.x,y:man.y,src:'man',ang:geo&&m.gps&&m.gps.dir!=null?geoDirAngle(geo,m.gps.dir):null});continue}
+  if(geo&&m.gps){const [x,y]=geoToPlan(geo,m.gps.lat,m.gps.lon);if(x>=0&&y>=0&&x<=1&&y<=1)out.push({m,ow,x,y,src:m.gps.src==='geo'?'geo':'gps',ang:m.gps.dir!=null?geoDirAngle(geo,m.gps.dir):null})}}
+ return out}
+function phFilt(l){const f=PHF;return l.filter(p=>{const d=phDate(p.m,p.ow);if(f.day)return (p.ow.k==='tagebuch'&&p.ow.date===f.day)||d===f.day;if(f.von&&d<f.von)return false;if(f.bis&&d>f.bis)return false;return true})}
+const cpinHtml=(p,lab,cls='')=>`<div class="cpin ${p.src} ${cls}" data-ph="${p.m.id}" style="left:${(p.x*100).toFixed(4)}%;top:${(p.y*100).toFixed(4)}%">${p.ang!=null?`<b style="transform:rotate(${p.ang.toFixed(1)}deg)"></b>`:''}<i>${lab!=null?`<span>${esc(lab)}</span>`:'📷'}</i></div>`;
+/* ---- Speichern ---- */
+async function pmSave(m){m.updatedAt=new Date().toISOString();if(!m.createdAt)m.createdAt=m.updatedAt;await dbPut('photometa',m);const i=S.photometa.findIndex(x=>x.id===m.id);if(i>=0)S.photometa[i]=m;else S.photometa.push(m)}
+async function pmFromFile(f,id,pid,extra={},live=null){let ex=null;try{ex=exifRead(await f.slice(0,262144).arrayBuffer())}catch(e){}
+ const m={id,projectId:pid,...extra};if(ex&&ex.taken)m.taken=ex.taken;if(ex&&(ex.make||ex.model))m.cam=[ex.make,ex.model].filter(Boolean).join(' ');
+ if(ex&&ex.lat!=null)m.gps={lat:ex.lat,lon:ex.lon,alt:ex.alt,dir:ex.dir,acc:ex.hpe,src:'exif'};
+ else if(live){const pos=await live;if(pos&&pos.acc<=150&&Date.now()-(f.lastModified||Date.now())<600000)m.gps={lat:pos.lat,lon:pos.lon,acc:pos.acc,src:'geo'}}
+ if(m.gps||m.taken||(m.pins&&m.pins.length)||m.own){Object.keys(m.gps||{}).forEach(k=>m.gps[k]==null&&delete m.gps[k]);await pmSave(m);return m}return null}
+function geoNow(timeout=20000){return new Promise(res=>{if(!navigator.geolocation)return res(null);let done=false;const t=setTimeout(()=>{if(!done){done=true;res(null)}},timeout);
+ try{navigator.geolocation.getCurrentPosition(p=>{if(done)return;done=true;clearTimeout(t);res({lat:+p.coords.latitude.toFixed(7),lon:+p.coords.longitude.toFixed(7),acc:Math.round(p.coords.accuracy)})},e=>{if(done)return;done=true;clearTimeout(t);res(null)},{enableHighAccuracy:true,maximumAge:30000,timeout})}catch(e){done=true;clearTimeout(t);res(null)}})}
+const useLiveGeo=()=>S.settings.geoCam!=='aus';
+App.pickPhoto=cam=>{const inp=$(cam?'#fileCam':'#fileGal');inp.value='';const live=cam&&useLiveGeo()?geoNow():null;inp.onchange=async()=>{const files=[...inp.files];if(!files.length||!DRAFT)return;toast('Fotos werden verarbeitet …');let g=0;
+ for(const f of files){try{const id='ph_'+uid();let pm=null;try{pm=await pmFromFile(f,id,DRAFT.projectId,{},live)}catch(e){}const data=await fileToImage(f);await dbPut('photos',{id,data,createdAt:new Date().toISOString()});photoCache.set(id,data);if(pm&&pm.gps)g++;DRAFT.photos.push(id);(DRAFT._newPhotos=DRAFT._newPhotos||[]).push(id)}catch(e){toast(e.message)}}
+ const st=$('#photoStrip');st.innerHTML=photoStrip();hydratePhotos(st);toast(files.length+' Foto(s) hinzugefügt'+(g?` · ${g} mit Standort 📍`:''))};inp.click()};
+const pmBadge=id=>{const m=pmOf(id);return m&&(m.gps||(m.pins||[]).some(p=>!p.hidden))?`<span class="phgeo" title="${m.gps?'mit Standort':'im Plan verortet'}">📍</span>`:''};
+/* ---- Foto-Detail ---- */
+App.viewPhoto=async id=>{const d=await getPhoto(id);if(!d)return;const m=pmOf(id);const own=photoOwners();const ow=own.get(id);const pid=(m&&m.projectId)||(ow&&ow.pid)||(DRAFT&&DRAFT.projectId)||'';
+ const loc=photoLocs(id,pid,own);const info=[m&&m.taken?'Aufnahme '+fmtDT(m.taken):'',m&&m.gps?(m.gps.src==='geo'?'Standort bei Aufnahme':'GPS')+' '+fmtLL(m.gps.lat,m.gps.lon)+(m.gps.acc?' (±'+fmtM(m.gps.acc)+')':'')+(m.gps.dir!=null?' · Blickrichtung '+Math.round(m.gps.dir)+'°':''):'',ow?ow.label:''].filter(Boolean);
+ openModal(`<img class="big" src="${d}" alt="Foto">${info.length?`<p class="sm mut">${info.map(esc).join('<br>')}</p>`:''}${loc.length?`<div class="sect"><h3>📍 Lage im Plan</h3></div>${photoSnip(loc[0])}<div class="sm mut" style="margin-top:4px">${esc(loc[0].pl.name)}${loc[0].pl.pages.length>1?' · Seite '+loc[0].pg:''} · ${loc[0].src==='man'?'manuell gesetzt':'automatisch per GPS'}${loc.length>1?` · auch auf ${loc.length-1} weiteren Plan/Plänen`:''}</div>`:''}
+ <div class="btnrow">${loc.length?`<button class="btn sm" onclick="App.closeModal();go('#/projekt/${loc[0].pl.projectId}/plan/${loc[0].pl.id}?s=${loc[0].pg}&ph=${id}')">Im Plan öffnen</button>`:''}${pid&&plansOf(pid).length?`<button class="btn sm sec" onclick="App.placerOpen('${id}','${pid}')">📍 Im Plan verorten</button>`:''}</div><div class="btnrow"><button class="btn blk" onclick="App.closeModal()">Schließen</button></div>`)};
+function fmtDT(s){if(!s)return '';const [d,t]=s.split('T');return fmtD(d)+(t?', '+t.slice(0,5)+' Uhr':'')}
+function photoLocs(id,pid,own){const out=[];for(const pl of plansOf(pid))for(let pg=1;pg<=pl.pages.length;pg++){const p=photoPinsFor(pl,pg,own).find(q=>q.m.id===id);if(p)out.push({...p,pl,pg})}return out.sort((a,b)=>(a.src==='man'?0:1)-(b.src==='man'?0:1))}
+function photoSnip(L,cls='psnip'){const P=L.pl.pages[L.pg-1];if(!P||!P.w)return '';const W=Math.max(150,P.w/700*100);const ratio=P.h/P.w;
+ return `<div class="${cls}"><div class="snipin" style="width:${W.toFixed(2)}%;margin-left:calc(50% - ${(L.x*W).toFixed(3)}%);margin-top:calc(var(--sh) - ${(L.y*W*ratio).toFixed(3)}%)"><img data-photo="${P.photo}" alt="Planausschnitt"><div class="annwrap">${annSvg(L.pl.id,L.pg,P.w,P.h)}</div></div>${cpinHtml({...L,x:0.5,y:0},null,'snp')}</div>`}
+/* ---- Manuell verorten aus dem Foto-Detail (ohne das Formular zu verlassen) ---- */
+App.placerOpen=(id,pid)=>{const pls=plansOf(pid);if(!pls.length)return toast('Für dieses Projekt sind noch keine Pläne vorhanden');const m=pmOf(id);const man=m&&(m.pins||[]).find(p=>!p.hidden&&pls.some(x=>x.id===p.planId));
+ PLACER={id,pid,plid:man?man.planId:pls[0].id,pg:man?(man.page||1):1,z:1,pt:man?[man.x,man.y]:null};placerRender()};
+function placerRender(){const P=PLACER;const pl=S.plans.find(x=>x.id===P.plid);const pg=Math.min(P.pg,pl.pages.length);P.pg=pg;const pp=pl.pages[pg-1];
+ openModal(`<h3>📍 Foto im Plan verorten</h3><div class="grid g2m"><label class="fld"><span>Plan</span><select onchange="App.placerSet('plid',this.value)">${plansOf(P.pid).map(x=>opt([x.id,x.name],P.plid)).join('')}</select></label>${pl.pages.length>1?`<label class="fld"><span>Seite</span><select onchange="App.placerSet('pg',this.value)">${pl.pages.map((_,i)=>opt([i+1,'Seite '+(i+1)],pg)).join('')}</select></label>`:''}</div>
+ <p class="sm mut">Auf die Aufnahmestelle tippen. Mit ＋/－ vergrößern, dann verschieben (scrollen).</p><div class="btnrow"><button class="btn sm sec" onclick="App.placerZoom(1.6)">＋</button><button class="btn sm sec" onclick="App.placerZoom(1/1.6)">－</button></div>
+ <div class="placer" id="placer"><div class="placerin" style="width:${(P.z*100).toFixed(1)}%" onclick="App.placerTap(event,this)"><img data-photo="${pp.photo}" alt="Plan"><div class="annwrap">${annSvg(pl.id,pg,pp.w,pp.h)}</div>${P.pt?cpinHtml({m:{id:P.id},x:P.pt[0],y:P.pt[1],src:'man',ang:null}):''}</div></div>
+ <div class="btnrow"><button class="btn" onclick="App.placerOk()" ${P.pt?'':'disabled'} id="placerOk">Übernehmen</button><button class="btn sec" onclick="App.closeModal()">Abbrechen</button></div>`);
+ if(P.pt&&P.z>1)setTimeout(()=>{const c=$('#placer');if(c){c.scrollLeft=P.pt[0]*c.scrollWidth-c.clientWidth/2;c.scrollTop=P.pt[1]*c.scrollHeight-c.clientHeight/2}},80)}
+App.placerSet=(k,v)=>{PLACER[k]=k==='pg'?+v:v;if(k==='plid'){PLACER.pg=1;PLACER.pt=null}placerRender()};
+App.placerZoom=f=>{const c=$('#placer');const P=PLACER;const cx=c?(c.scrollLeft+c.clientWidth/2)/c.scrollWidth:0.5,cy=c?(c.scrollTop+c.clientHeight/2)/c.scrollHeight:0.5;P.z=Math.min(8,Math.max(1,P.z*f));const inn=c.querySelector('.placerin');inn.style.width=(P.z*100).toFixed(1)+'%';requestAnimationFrame(()=>{c.scrollLeft=cx*c.scrollWidth-c.clientWidth/2;c.scrollTop=cy*c.scrollHeight-c.clientHeight/2})};
+App.placerTap=(e,el)=>{const r=el.getBoundingClientRect();const x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(x<0||y<0||x>1||y>1)return;PLACER.pt=[+x.toFixed(5),+y.toFixed(5)];
+ el.querySelectorAll('.cpin').forEach(c=>c.remove());el.insertAdjacentHTML('beforeend',cpinHtml({m:{id:PLACER.id},x,y,src:'man',ang:null}));$('#placerOk').disabled=false};
+App.placerOk=async()=>{const P=PLACER;if(!P||!P.pt)return;await pinSet(P.id,P.pid,P.plid,P.pg,P.pt[0],P.pt[1]);PLACER=null;App.closeModal();toast('Foto im Plan verortet');const st=$('#photoStrip');if(st&&DRAFT){st.innerHTML=photoStrip();hydratePhotos(st)}};
+async function pinSet(id,pid,plid,pg,x,y){const m=pmOf(id)?clone(pmOf(id)):{id,projectId:pid};m.projectId=m.projectId||pid;m.pins=(m.pins||[]).filter(p=>!(p.planId===plid&&(p.page||1)===pg));m.pins.push({planId:plid,page:pg,x:+(+x).toFixed(5),y:+(+y).toFixed(5)});await pmSave(m);return m}
+/* ---- Viewer: Kamera-Pins, Filter, Cluster ---- */
+let PVSC=0,PVSCT=null;
+function pvScaleHook(){if(!PV)return;if(PVSC&&Math.abs(Math.log(PV.s/PVSC))<0.15)return;clearTimeout(PVSCT);PVSCT=setTimeout(()=>{if(PV){PVSC=PV.s;pvPhotoPins()}},120)}
+function pvPhotoPins(){const v=PV;if(!v)return;const el=$('#pvPh');if(!el)return;const all=photoPinsFor(v.pl,v.pg);v.phAll=all;const l=PHF.show?phFilt(all):[];v.phVis=l;
+ const cnt=$('#phCnt');if(cnt)cnt.textContent=all.length?`${l.length} von ${all.length} Fotos sichtbar`:'keine Fotos auf diesem Plan';
+ const R=34/(v.s||1);const used=new Set();const out=[];const pts=l.map(p=>({p,X:p.x*v.w,Y:p.y*v.h}));
+ const noClu=v.mode==='foto';for(let i=0;i<pts.length;i++){if(used.has(i))continue;const g=[pts[i]];used.add(i);if(!noClu&&pts[i].p.m.id!==v.focusPh)for(let j=i+1;j<pts.length;j++){if(used.has(j)||pts[j].p.m.id===v.focusPh)continue;if(Math.hypot(pts[j].X-pts[i].X,pts[j].Y-pts[i].Y)<R){g.push(pts[j]);used.add(j)}}out.push(g)}
+ el.innerHTML=out.map(g=>{if(g.length===1)return cpinHtml(g[0].p,null,v.focusPh===g[0].p.m.id?'hl':'');const X=g.reduce((s,q)=>s+q.X,0)/g.length,Y=g.reduce((s,q)=>s+q.Y,0)/g.length;return `<div class="cpin clu" data-ph="${g.map(q=>q.p.m.id).join(',')}" style="left:${(X/v.w*100).toFixed(4)}%;top:${(Y/v.h*100).toFixed(4)}%"><i><span>${g.length}</span></i></div>`}).join('')}
+function pvFiltBar(p){const days=[...new Set(S.diary.filter(e=>e.projectId===p.id&&(e.photos||[]).length).map(e=>e.date))].sort().reverse();
+ return `<div class="pvfilt" id="pvFilt"><label class="cbl"><input type="checkbox" ${PHF.show?'checked':''} onchange="App.phf('show',this.checked)"> 📷 Fotos</label><select onchange="App.phf('day',this.value)" aria-label="Bautagebuch-Tag"><option value="">alle Tage</option>${days.map(d=>opt([d,'Tagebuch '+fmtD(d)],PHF.day)).join('')}</select><label>von <input type="date" value="${PHF.von}" onchange="App.phf('von',this.value)"></label><label>bis <input type="date" value="${PHF.bis}" onchange="App.phf('bis',this.value)"></label><span class="sm mut" id="phCnt"></span></div>`}
+App.phf=(k,v)=>{PHF[k]=v;if(k==='day'&&v){PHF.von='';PHF.bis=''}if((k==='von'||k==='bis')&&v)PHF.day='';const f=$('#pvFilt');if(f&&PV){f.outerHTML=pvFiltBar(proj(PV.pl.projectId))}pvPhotoPins()};
+function cpinTap(ids){const l=ids.split(',');if(l.length>1){const v=PV;const ps=(v.phVis||[]).filter(p=>l.includes(p.m.id));if(!ps.length)return;const X=ps.reduce((s,p)=>s+p.x,0)/ps.length*v.w,Y=ps.reduce((s,p)=>s+p.y,0)/ps.length*v.h;const r=v.st.getBoundingClientRect();
+  const span=Math.max(...ps.map(p=>Math.hypot(p.x*v.w-X,p.y*v.h-Y)),1);if(v.s*span*2>60&&v.s>=Math.max(4,pvFitScale())*0.98)return phListModal(ps);const ns=Math.min(Math.max(4,pvFitScale()),Math.max(v.s*2.5,80/span));v.s=ns;v.tx=r.width/2-X*ns;v.ty=r.height/2-Y*ns;pvApply();PVSC=0;pvScaleHook();return}
+ photoPinPopup(l[0])}
+function phListModal(ps){openModal(`<h3>📷 ${ps.length} Fotos an dieser Stelle</h3><div class="photos">${ps.map(p=>`<div class="ph"><img data-photo="${p.m.id}" alt="Foto" onclick="App.phPop('${p.m.id}')"></div>`).join('')}</div><div class="btnrow"><button class="btn sec blk" onclick="App.closeModal()">Schließen</button></div>`)}
+App.phPop=id=>photoPinPopup(id);
+function photoPinPopup(id){const v=PV;const p=(v&&v.phAll||[]).find(q=>q.m.id===id);if(!p)return App.viewPhoto(id);const m=p.m,ow=p.ow;
+ const srcTxt=p.src==='man'?'manuell im Plan gesetzt':p.src==='geo'?`automatisch – Handy-Standort bei Aufnahme${m.gps.acc?' (±'+fmtM(m.gps.acc)+')':''}`:`automatisch per Foto-GPS${m.gps.acc?' (±'+fmtM(m.gps.acc)+')':''}`;
+ openModal(`<h3>📷 Foto</h3><img class="big" data-photo="${id}" alt="Foto" onclick="App.viewPhoto('${id}')"><p class="sm"><b>${esc(fmtDT(m.taken)||fmtD(ow.date)||'')}</b><br>Quelle: ${ow.href?`<a href="${ow.href}" onclick="App.closeModal()">${esc(ow.label)}</a>`:esc(ow.label)}<br><span class="mut">Position: ${esc(srcTxt)}${m.gps&&m.gps.dir!=null?' · Blickrichtung '+Math.round(m.gps.dir)+'°':''}</span></p>
+ <div class="btnrow">${ow.href&&ow.k!=='plan'?`<button class="btn sm" onclick="App.closeModal();go('${ow.href}')">${ow.k==='tagebuch'?'Tagebuch öffnen':ow.k==='mangel'?'Mangel öffnen':'Öffnen'}</button>`:''}<button class="btn sm sec" onclick="App.viewPhoto('${id}')">Foto groß</button><button class="btn sm sec" onclick="App.phMove('${id}')">Verschieben</button><button class="btn sm dan" onclick="App.phUnpin('${id}')">Vom Plan entfernen</button>${ow.k==='plan'?`<button class="btn sm dan" onclick="App.phDelete('${id}')">Foto löschen</button>`:''}</div><div class="btnrow"><button class="btn sec blk" onclick="App.closeModal()">Schließen</button></div>`)}
+App.phMove=id=>{App.closeModal();if(PV.mode!=='foto')pvSetMode('foto');PV.focusPh=id;pvPhotoPins();toast('Kamera-Pin mit dem Finger an die richtige Stelle ziehen')};
+App.phUnpin=async id=>{const v=PV;const p=(v.phAll||[]).find(q=>q.m.id===id);if(!p)return;if(!confirm(p.src==='man'?'Foto-Pin von diesem Plan entfernen? Das Foto bleibt erhalten.':'Dieses Foto wird per GPS automatisch platziert. Auf diesem Plan ausblenden? (Das Foto bleibt erhalten.)'))return;
+ const m=clone(p.m);m.pins=(m.pins||[]).filter(q=>!(q.planId===v.pl.id&&(q.page||1)===v.pg));if(p.src!=='man'||(m.gps&&pageGeo(v.pl,v.pg)))m.pins.push({planId:v.pl.id,page:v.pg,hidden:true});
+ if(m.gps&&p.src==='man'&&pageGeo(v.pl,v.pg))m.pins=m.pins.filter(q=>!(q.planId===v.pl.id&&(q.page||1)===v.pg&&q.hidden)); /* zurück zur GPS-Position */
+ await pmSave(m);App.closeModal();pvPhotoPins();toast(p.src==='man'&&m.gps&&pageGeo(v.pl,v.pg)?'Manuelle Position entfernt – GPS-Position gilt wieder':'Vom Plan entfernt')};
+App.phDelete=async id=>{if(!confirm('Dieses Plan-Foto endgültig löschen?'))return;await dbDel('photos',id);photoCache.delete(id);App.closeModal();pvPhotoPins();toast('Foto gelöscht')};
+/* ---- Modus „Foto platzieren“ ---- */
+function pvFotoPanel(){return `<div class="pvtools hidden" id="pvFoto"><div class="tgrp"><button class="btn sm" onclick="App.phUpload(true)">📷 Aufnehmen</button><button class="btn sm sec" onclick="App.phUpload(false)">🖼️ Fotos hochladen</button></div><div class="sm" id="pvFotoInfo"></div></div>`}
+function pvFotoInfo(){const e=$('#pvFotoInfo');if(!e||!PV)return;const q=PV.placeQ||[];e.innerHTML=q.length?`<b>Noch zu verorten: ${q.length} Foto(s)</b> – tippe die Aufnahmestelle für das markierte Foto <img class="qthumb" data-photo="${q[0]}" alt=""> <button class="btn sm sec" onclick="App.phSkip()">Überspringen</button>`:pageGeo(PV.pl,PV.pg)?'Plan ist eingemessen: Fotos mit GPS erscheinen automatisch.':'Plan ist nicht eingemessen – Fotos per Antippen platzieren (oder „🌐 Einmessen“).';hydratePhotos(e)}
+App.phSkip=()=>{PV.placeQ.shift();pvFotoInfo();pvModeUI()};
+App.phUpload=cam=>{const v=PV;const inp=$(cam?'#fileCam':'#fileGal');inp.value='';const at=PH_TMP;PH_TMP=null;const live=cam&&useLiveGeo()?geoNow():null;
+ inp.onchange=async()=>{const files=[...inp.files];if(!files.length||!PV)return;App.closeModal();toast('Fotos werden verarbeitet …');const pl=v.pl,pg=v.pg,geo=pageGeo(pl,pg);const placed=[],queue=[];
+  for(const f of files){try{const id='ph_'+uid();let pm=await pmFromFile(f,id,pl.projectId,{own:'plan',planId:pl.id,page:pg},live);const data=await fileToImage(f);await dbPut('photos',{id,data,createdAt:new Date().toISOString()});photoCache.set(id,data);
+   if(at&&files.length===1){await pinSet(id,pl.projectId,pl.id,pg,at.x,at.y);placed.push(id);continue}
+   const auto=geo&&pm&&pm.gps&&(([x,y])=>x>=0&&y>=0&&x<=1&&y<=1)(geoToPlan(geo,pm.gps.lat,pm.gps.lon));if(auto)placed.push(id);else queue.push(id)}catch(e){toast(e.message)}}
+  PV.placeQ=[...(PV.placeQ||[]),...queue];pvPhotoPins();pvFotoInfo();pvModeUI();toast(`${files.length} Foto(s) gespeichert${placed.length?` · ${placed.length} platziert`:''}${queue.length?` · ${queue.length} bitte antippen`:''}`)};inp.click()};
+function pvFotoTap(x,y){const v=PV;const pin={x:+x.toFixed(5),y:+y.toFixed(5)};
+ if(v.placePh){const id=v.placePh;v.placePh='';return pinSet(id,v.pl.projectId,v.pl.id,v.pg,pin.x,pin.y).then(()=>{v.focusPh=id;pvPhotoPins();pvModeUI();toast('Foto verortet')})}
+ if((v.placeQ||[]).length){const id=v.placeQ.shift();return pinSet(id,v.pl.projectId,v.pl.id,v.pg,pin.x,pin.y).then(()=>{pvPhotoPins();pvFotoInfo();pvModeUI()})}
+ PH_TMP=pin;const own=photoOwners();const l=[...own.entries()].filter(([id,o])=>o.pid===v.pl.projectId&&o.k!=='plan').map(([id,o])=>({id,o,m:pmOf(id)}));
+ const onThis=new Set((v.phAll||[]).map(p=>p.m.id));const days=[...new Set(l.map(x=>x.o.date))].filter(Boolean).sort().reverse();
+ openModal(`<h3>📷 Foto an dieser Stelle</h3><div class="btnrow"><button class="btn" onclick="App.phUpload(true)">📷 Foto aufnehmen</button><button class="btn sec" onclick="App.phUpload(false)">🖼️ Aus Galerie</button></div><div class="sect"><h3>oder vorhandenes Foto wählen</h3></div><select id="phpDay" onchange="App.phPickList(this.value)"><option value="">– Tag / Herkunft wählen –</option>${days.map(d=>opt([d,fmtD(d)+' ('+l.filter(x=>x.o.date===d).length+')'],'')).join('')}</select><div class="photos" id="phpList" style="margin-top:8px"></div><div class="btnrow"><button class="btn sec blk" onclick="App.closeModal()">Abbrechen</button></div>`);
+ App._phpL=l;App._phpOn=onThis;if(days.length){$('#phpDay').value=days[0];App.phPickList(days[0])}}
+App.phPickList=d=>{const l=(App._phpL||[]).filter(x=>x.o.date===d);const e=$('#phpList');e.innerHTML=l.map(x=>`<div class="ph"><img data-photo="${x.id}" alt="Foto" onclick="App.phPickOk('${x.id}')">${App._phpOn.has(x.id)?'<span class="phgeo">📍</span>':''}<span class="phcap">${esc(x.o.k==='mangel'?x.o.label.split(' ')[1]:x.o.k==='tagebuch'?'TB':'Prot.')}</span></div>`).join('')||'<div class="mut sm">Keine Fotos</div>';hydratePhotos(e)};
+App.phPickOk=async id=>{const v=PV,p=PH_TMP;if(!p)return;PH_TMP=null;App.closeModal();await pinSet(id,v.pl.projectId,v.pl.id,v.pg,p.x,p.y);v.focusPh=id;pvPhotoPins();toast('Foto verortet')};
+async function cpinDrop(a){const v=PV;const r=v.st.getBoundingClientRect();const el=a.el;const x=parseFloat(el.style.left)/100,y=parseFloat(el.style.top)/100;if(x<0||y<0||x>1||y>1){pvPhotoPins();return toast('Bitte innerhalb des Plans ablegen')}
+ await pinSet(a.id,v.pl.projectId,v.pl.id,v.pg,x,y);v.focusPh=a.id;pvPhotoPins();toast('Position gespeichert (manuell)')}
+function cpinMove(a,p){const v=PV;if(!a.moved&&Math.hypot(p.x-a.start.x,p.y-a.start.y)<8)return;a.moved=true;const q=toPage(p);a.el.style.left=(q.x/v.w*100).toFixed(4)+'%';a.el.style.top=(q.y/v.h*100).toFixed(4)+'%';const b=a.el.querySelector('b');if(b)b.remove()}
+/* ---- Modus „Plan einmessen“ ---- */
+function geoDraft(){const v=PV;const g=pageGeo(v.pl,v.pg)||(v.pl.pages[v.pg-1].geo||null);return g?clone(g):{pts:[]}}
+function pvGeoLayer(){const v=PV;const e=$('#pvGeo');if(!e)return;const g=v.pl.pages[v.pg-1].geo;const pts=(g&&g.pts)||[];e.innerHTML=v.mode==='geo'||v.showGeo?pts.map((p,i)=>`<div class="gpt" style="left:${(p.x*100).toFixed(4)}%;top:${(p.y*100).toFixed(4)}%"><i></i><span>${i+1}</span></div>`).join('')+(v.geoMove!=null?'':''):''}
+function pvGeoPanel(){return `<div class="pvtools hidden" id="pvGeoP"></div>`}
+function pvGeoInfo(){const v=PV;const e=$('#pvGeoP');if(!e||!v)return;const g=v.pl.pages[v.pg-1].geo;const pts=(g&&g.pts)||[];
+ const acc=g&&g.T?(g.rms!=null?`Restfehler (RMS): <b>${fmtM(g.rms)}</b>`:g.kind==='aff'&&g.chk!=null?`keine Kontrolle (3 Punkte affin = exakt) · Abweichung vom maßstabstreuen Modell: ${fmtM(g.chk)}`:'keine Kontrolle möglich – für eine Genauigkeitsangabe mind. 3 Punkte (maßstabstreu) bzw. 4 Punkte (affin) setzen'):'';
+ e.innerHTML=`${g&&g.auto?`<div class="hint">⚠️ automatisch eingemessen – bitte prüfen${g.note?' ('+esc(g.note)+')':''} <button class="btn sm sec" onclick="App.geoOk()">Geprüft ✓</button></div>`:''}
+ <div class="sm">${pts.length?`<b>${pts.length} Passpunkt(e)</b>`:'Noch keine Passpunkte.'} ${g&&g.T?`· Modell: ${g.kind==='aff'?'affin':'maßstabstreu (Ähnlichkeit)'} · ca. ${fmtM(g.mpp*100)} je 100 Pixel · ${acc}${g.aniso>0.03&&g.kind==='aff'?` · ⚠️ Verzerrung ${Math.round(g.aniso*100)} % – Punkte prüfen`:''}`:pts.length===1?'· mind. 1 weiterer Punkt nötig':''}${g&&g.warn?`<br>⚠️ ${esc(g.warn)}`:''}</div>
+ ${pts.length?`<details class="gdet" ${v.geoOpen?'open':''} ontoggle="PV.geoOpen=this.open"><summary class="sm">Passpunkte anzeigen / bearbeiten</summary><div class="glist">${pts.map((p,i)=>`<div class="grow2"><b>${i+1}</b> <span class="sm">${fmtLL(p.lat,p.lon)}${p.src?' · '+esc(p.src):''}${g.res&&g.res[i]!=null&&g.rms!=null?' · Abw. '+fmtM(g.res[i]):''}</span> <button class="btn sm sec" onclick="App.geoEdit(${i})">✎</button><button class="btn sm sec" onclick="App.geoReTap(${i})" title="Position im Plan neu antippen">⌖</button><button class="btn sm dan" onclick="App.geoDel(${i})">✕</button></div>`).join('')}</div></details>`:''}
+ <div class="tgrp"><label class="sm">Modell <select onchange="App.geoKind(this.value)">${[['auto','automatisch (2 P. maßstabstreu, ab 3 P. affin)'],['sim','immer maßstabstreu (robuster)']].map(x=>opt(x,(g&&g.kindPref)||'auto')).join('')}</select></label>${pts.length?`<button class="btn sm dan" onclick="App.geoClear()">Einmessung löschen</button>`:''}</div>
+ <div class="sm mut">${v.geoRe!=null?`<b>Tippe die neue Position für Punkt ${v.geoRe+1}.</b>`:'Tippe auf eine eindeutige Stelle im Plan (Ecke, Mast, Wegkreuzung) und gib deren Koordinate ein – mind. 2, besser 4 gut verteilte Punkte.'}</div>`}
+async function geoStore(g){const v=PV;const pl=v.pl;const P=pl.pages[v.pg-1];const pts=g.pts||[];const f=pts.length>=2?geoFit(pts,P.w||v.w,P.h||v.h,g.kindPref||'auto'):null;
+ const out={pts,kindPref:g.kindPref||'auto',auto:!!g.auto&&!g._touched,note:g.auto&&!g._touched?g.note:'',at:new Date().toISOString(),...(f||{})};if(!pts.length)delete P.geo;else P.geo=out;await save('plans',pl);v.pl=pl;pvGeoLayer();pvGeoInfo();pvPhotoPins()}
+function geoCoordModal(idx,x,y){const v=PV;const g=v.pl.pages[v.pg-1].geo;const p=idx!=null&&g?g.pts[idx]:null;GEO_TMP={idx,x,y};
+ openModal(`<h3>🌐 Passpunkt ${idx!=null?idx+1:((g&&g.pts||[]).length+1)}</h3><label class="fld"><span>Koordinate</span><input id="geoIn" value="${p?fmtLL(p.lat,p.lon):''}" placeholder="z. B. 48.889527, 12.416300" oninput="App.geoParse()" autocomplete="off"></label><div class="sm mut" id="geoPv">Formate: Dezimalgrad (aus Google Maps kopieren: lange auf die Stelle tippen → Koordinate antippen), 48°53'22.3"N 12°24'58.7"E oder UTM 32N (z. B. 32U 750409 5420803).</div>
+ <div class="btnrow"><button class="btn sec" onclick="App.geoHere()">📍 Aktuellen Standort verwenden</button></div><div class="btnrow"><button class="btn" onclick="App.geoSave()">Übernehmen</button><button class="btn sec" onclick="App.closeModal()">Abbrechen</button></div>`);setTimeout(()=>{const i=$('#geoIn');if(i)i.focus()},60)}
+App.geoParse=()=>{const c=parseCoord($('#geoIn').value);const e=$('#geoPv');if(e)e.innerHTML=c?`✓ erkannt (${esc(c.src)}): <b>${fmtLL(c.lat,c.lon)}</b>`:'Format nicht erkannt'};
+App.geoHere=async()=>{const e=$('#geoPv');if(e)e.textContent='Standort wird ermittelt …';const p=await geoNow(25000);if(!p){if(e)e.textContent='Standort nicht verfügbar (Berechtigung erteilt? GPS an?)';return}
+ $('#geoIn').value=fmtLL(p.lat,p.lon);GEO_TMP.acc=p.acc;if(e)e.innerHTML=`✓ Standort: <b>${fmtLL(p.lat,p.lon)}</b> · Genauigkeit ±${fmtM(p.acc)}${p.acc>10?' – ⚠️ für Passpunkte eher ungenau':''}`};
+App.geoSave=async()=>{const c=parseCoord(($('#geoIn')||{}).value);if(!c)return toast('Koordinate nicht erkannt');const t=GEO_TMP;const g=geoDraft();g._touched=true;g.pts=g.pts||[];
+ const src=t.acc?`Standort ±${Math.round(t.acc)} m`:c.src;if(t.idx!=null){g.pts[t.idx]={...g.pts[t.idx],lat:c.lat,lon:c.lon,src}}else g.pts.push({x:+t.x.toFixed(5),y:+t.y.toFixed(5),lat:c.lat,lon:c.lon,src});
+ if(g.pts.length>=2){const P=PV.pl.pages[PV.pg-1];const f=geoFit(g.pts,P.w||PV.w,P.h||PV.h,g.kindPref||'auto');if(f&&f.mpp>50&&!confirm(`Ungewöhnlicher Maßstab (${fmtM(f.mpp)} je Pixel). Stimmen die Koordinaten? Trotzdem speichern?`))return}
+ App.closeModal();await geoStore(g);toast('Passpunkt gespeichert')};
+App.geoEdit=i=>{const p=PV.pl.pages[PV.pg-1].geo.pts[i];geoCoordModal(i,p.x,p.y)};
+App.geoReTap=i=>{PV.geoRe=i;pvGeoInfo();toast('Neue Position im Plan antippen')};
+App.geoDel=async i=>{if(!confirm('Passpunkt '+(i+1)+' löschen?'))return;const g=geoDraft();g._touched=true;g.pts.splice(i,1);await geoStore(g)};
+App.geoClear=async()=>{if(!confirm('Einmessung dieser Planseite komplett löschen? (GPS-Fotos werden dann nicht mehr automatisch platziert; manuell gesetzte Foto-Pins bleiben.)'))return;await geoStore({pts:[]})};
+App.geoKind=async k=>{const g=geoDraft();g.kindPref=k;g._touched=g._touched||!g.auto;await geoStore(g)};
+App.geoOk=async()=>{const g=geoDraft();g._touched=true;await geoStore(g);toast('Als geprüft markiert')};
+function pvGeoTap(x,y,px,py){const v=PV;if(v.geoRe!=null){const i=v.geoRe;v.geoRe=null;const g=geoDraft();g._touched=true;g.pts[i]={...g.pts[i],x:+x.toFixed(5),y:+y.toFixed(5)};return geoStore(g)}
+ const g=v.pl.pages[v.pg-1].geo;const pts=(g&&g.pts)||[];const hit=pts.findIndex(p=>Math.hypot(p.x*v.w-px,p.y*v.h-py)*v.s<18);if(hit>=0)return App.geoEdit(hit);geoCoordModal(null,x,y)}
+/* ---- Bericht: Plan mit Fotopositionen ---- */
+function rptPhotoPlans(entries,pid,multi){const items=new Map();for(const e of entries)(e.photos||[]).forEach((id,i)=>items.set(id,multi?`${e.date.slice(8,10)}.${e.date.slice(5,7)}/${i+1}`:String(i+1)));if(!items.size)return '';const own=photoOwners();const secs=[];
+ for(const pl of plansOf(pid))for(let pg=1;pg<=pl.pages.length;pg++){const l=photoPinsFor(pl,pg,own).filter(p=>items.has(p.m.id));if(!l.length)continue;const P=pl.pages[pg-1];
+  secs.push(`<section class="r-plan"><h4>${esc(pl.name)}${pl.revision?' · Index '+esc(pl.revision):''}${pl.pages.length>1?' · Seite '+pg:''}</h4><div class="r-planimg"><img data-photo="${P.photo}" alt="Plan"><div class="annwrap">${annSvg(pl.id,pg,P.w,P.h)}</div>${l.map(p=>cpinHtml(p,items.get(p.m.id),'rp')).join('')}</div><div class="r-pleg">Fotos: ${l.map(p=>esc(items.get(p.m.id))).join(', ')} · ${l.some(p=>p.src!=='man')?'Positionen aus Foto-GPS/Standort (Genauigkeit je nach Handy-GPS einige Meter)':'manuell verortet'}${l.some(p=>p.src!=='man')&&l.some(p=>p.src==='man')?', teils manuell':''}</div></section>`)}
+ return secs.length?`<h2>Fotopositionen im Plan</h2>`+secs.join(''):''}
+
 /* ================= Suche ================= */
 let searchQ='';
 function searchResults(){const q=lc(searchQ.trim());if(q.length<2)return '<div class="card empty">Mindestens 2 Zeichen eingeben – durchsucht Projekte, Kontakte, Bautagebuch, Mängel, Pläne, Aufgaben und Protokolle.</div>';
@@ -874,9 +1112,10 @@ function viewSettings(){setHeader('Einstellungen');const s=S.settings;const f=(l
  return `<div class="card"><h3>Mein Büro (erscheint auf Berichten)</h3><div class="grid">${f('Firmenname','company')}${f('Name Bauleiter','name')}</div>${f('Anschrift','address','textarea')}<div class="grid">${f('Telefon','phone','tel')}${f('E-Mail','email','email')}</div>
  <div class="fld"><span class="mut sm" style="font-weight:600">Logo</span>${s.logo?`<img class="logo-prev" src="${s.logo}" alt="Logo">`:'<div class="mut sm">Kein Logo</div>'}<div class="btnrow"><button class="btn sm sec" onclick="App.pickLogo()">Logo wählen</button>${s.logo?'<button class="btn sm dan" onclick="App.rmLogo()">Logo entfernen</button>':''}</div></div></div>
  <div class="card"><h3>Datensicherung</h3><p class="sm">Alle Daten liegen nur in diesem Browser auf diesem Gerät. Sichere regelmäßig und übertrage die Datei so auf andere Geräte (z. B. per Cloud, E-Mail, USB).</p>
- <p class="sm mut">${cnt[0]} Projekte · ${cnt[1]} Kontakte · ${cnt[2]} Tagebucheinträge · ${cnt[3]} Mängel · ${cnt[4]} Aufgaben · ${cnt[5]} Protokolle · ${cnt[6]} Pläne · ${cnt[7]} Zeichnungen/Reihen</p><p class="sm mut" id="stinfo"></p>${s.lastExport?`<p class="sm">Letzte Sicherung: ${new Date(s.lastExport).toLocaleString('de-DE')}</p>`:'<p class="hint">Noch keine Sicherung erstellt.</p>'}
+ <p class="sm mut">${cnt[0]} Projekte · ${cnt[1]} Kontakte · ${cnt[2]} Tagebucheinträge · ${cnt[3]} Mängel · ${cnt[4]} Aufgaben · ${cnt[5]} Protokolle · ${cnt[6]} Pläne · ${cnt[7]} Zeichnungen/Reihen · ${cnt[8]} Foto-Standorte/-Pins</p><p class="sm mut" id="stinfo"></p>${s.lastExport?`<p class="sm">Letzte Sicherung: ${new Date(s.lastExport).toLocaleString('de-DE')}</p>`:'<p class="hint">Noch keine Sicherung erstellt.</p>'}
  <div class="btnrow"><button class="btn" onclick="App.exportData()">⬇️ Sicherung exportieren (JSON)</button><button class="btn sec" onclick="App.importData('merge')">⬆️ Importieren (zusammenführen)</button><button class="btn sec" onclick="App.importData('replace')">Importieren (ersetzen)</button></div></div>
  <div class="card"><h3>Pläne</h3><label class="fld"><span>Auflösung beim Hochladen von Plänen</span><select data-s="planRes" onchange="App.setS(this)">${[['','Standard – 3500 px (empfohlen)'],['hoch','Hoch – 5000 px (schärfer, ca. doppelter Speicher)']].map(x=>opt(x,s.planRes||'')).join('')}</select></label><p class="sm mut">PDF-Seiten werden beim Hochladen in Bilder umgewandelt und offline gespeichert; das Original-PDF wird nicht gespeichert. Große Pläne belegen ca. 0,5–2 MB pro Seite und sind in der Sicherung (JSON) enthalten.</p></div>
+ <div class="card"><h3>Fotos & Standort</h3><label class="fld"><span>Standort bei Kamera-Aufnahme</span><select data-s="geoCam" onchange="App.setS(this)">${[['','verwenden, wenn das Foto selbst kein GPS enthält (empfohlen)'],['aus','nicht verwenden']].map(x=>opt(x,s.geoCam||'')).join('')}</select></label><p class="sm mut">GPS-Daten (EXIF) werden beim Hinzufügen aus dem Originalfoto gelesen, bevor es verkleinert wird. Fotos mit Standort erscheinen automatisch als 📷-Pin auf eingemessenen Plänen. Hinweis: Manche Handys entfernen den Standort beim Teilen oder beim Auswählen aus der Galerie.</p></div>
  <div class="card"><h3>Sonstiges</h3><div class="btnrow"><button class="btn sec" onclick="App.loadSample()">Beispieldaten laden</button><button class="btn dan" onclick="App.wipe()">Alle Daten löschen</button></div><p class="sm mut" style="margin-top:12px">Bauleiter-App Version ${VERSION} · Tipp: Im Browser-Menü „Zum Startbildschirm hinzufügen“ wählen, dann startet sie wie eine App.</p></div>`}
 App.pickLogo=()=>{const i=$('#fileAny');i.accept='image/*';i.value='';i.onchange=async()=>{const f=i.files[0];if(!f)return;try{S.settings.logo=await fileToImage(f,500,0.92,'image/png');await saveSettings();render()}catch(e){toast(e.message)}};i.click()};
 App.rmLogo=async()=>{delete S.settings.logo;await saveSettings();render()};
@@ -886,9 +1125,12 @@ App.exportData=async()=>{const out={app:'bauleiter-app',version:1,exportedAt:new
 App.importData=mode=>{const i=$('#fileAny');i.accept='.json,application/json';i.value='';i.onchange=async()=>{const f=i.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(o.app!=='bauleiter-app'||!o.data)throw new Error('Keine gültige Bauleiter-Sicherung');
  if(mode==='replace'&&o.partial)throw new Error('Diese Datei enthält nur einen Teil der Daten (z. B. nur Pläne). Bitte „Importieren (zusammenführen)“ verwenden – sonst würden alle anderen Daten gelöscht.');
  if(mode==='replace'&&!confirm('ACHTUNG: Alle vorhandenen Daten auf diesem Gerät werden durch die Sicherung ersetzt. Fortfahren?'))return;
- if(mode==='replace')for(const s of [...DATA,'photos'])await dbClear(s);for(const s of [...DATA,'photos'])await dbPutMany(s,o.data[s]||[]);
+ if(mode==='replace')for(const s of [...DATA,'photos'])await dbClear(s);if(mode==='merge')importKeep(o.data);for(const s of [...DATA,'photos'])await dbPutMany(s,o.data[s]||[]);
  if(o.settings&&(mode==='replace'||!S.settings.company)){S.settings={...o.settings,...(mode==='merge'?S.settings:{})};await saveSettings()}
  photoCache.clear();await loadAll();buildNav();toast('Import abgeschlossen');go('#/')}catch(e){alert('Import fehlgeschlagen: '+e.message)}};i.click()};
+function importKeep(d){ /* Zusammenführen: manuelle Foto-Pins und Plan-Einmessungen auf diesem Gerät nicht überschreiben */
+ if(d.photometa)d.photometa=d.photometa.map(n=>{const e=S.photometa.find(x=>x.id===n.id);if(!e)return n;const ep=e.pins||[];return {...n,...e,gps:e.gps||n.gps,taken:e.taken||n.taken,pins:[...ep,...(n.pins||[]).filter(p=>!ep.some(q=>q.planId===p.planId&&(q.page||1)===(p.page||1)))]}});
+ if(d.plans)d.plans=d.plans.map(n=>{const e=S.plans.find(x=>x.id===n.id);if(!e||!n.pages)return n;return {...n,pages:n.pages.map((pg,i)=>{const eg=e.pages&&e.pages[i]&&e.pages[i].geo;return eg&&(!pg.geo||!eg.auto)?{...pg,geo:eg}:pg})}})}
 App.wipe=async()=>{if(!confirm('Wirklich ALLE Daten (Projekte, Fotos, Einstellungen) auf diesem Gerät löschen?'))return;if(!confirm('Letzte Warnung: Ohne Sicherung sind die Daten verloren. Löschen?'))return;for(const s of STORES)await dbClear(s);photoCache.clear();await loadAll();buildNav();toast('Alle Daten gelöscht');go('#/')};
 
 /* ================= Beispieldaten ================= */
