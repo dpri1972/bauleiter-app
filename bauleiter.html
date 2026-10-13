@@ -253,7 +253,7 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 <style id="pageStyle"></style>
 <script>
 'use strict';
-const VERSION='1.4';
+const VERSION='1.5';
 /* ================= Hilfsfunktionen ================= */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1125,6 +1125,7 @@ function viewSettings(){setHeader('Einstellungen');const s=S.settings;const f=(l
  <div class="card"><h3>Datensicherung</h3><p class="sm">Alle Daten liegen nur in diesem Browser auf diesem Gerät. Sichere regelmäßig und übertrage die Datei so auf andere Geräte (z. B. per Cloud, E-Mail, USB).</p>
  <p class="sm mut">${cnt[0]} Projekte · ${cnt[1]} Kontakte · ${cnt[2]} Tagebucheinträge · ${cnt[3]} Mängel · ${cnt[4]} Aufgaben · ${cnt[5]} Protokolle · ${cnt[6]} Pläne · ${cnt[7]} Zeichnungen/Reihen · ${cnt[8]} Foto-Standorte/-Pins</p><p class="sm mut" id="stinfo"></p>${s.lastExport?`<p class="sm">Letzte Sicherung: ${new Date(s.lastExport).toLocaleString('de-DE')}</p>`:'<p class="hint">Noch keine Sicherung erstellt.</p>'}
  <div class="btnrow"><button class="btn" onclick="App.exportData()">⬇️ Sicherung exportieren (JSON)</button><button class="btn sec" onclick="App.importData('merge')">⬆️ Importieren (zusammenführen)</button><button class="btn sec" onclick="App.importData('replace')">Importieren (ersetzen)</button></div></div>
+ ${fotoAutoCard()}
  <div class="card"><h3>Pläne</h3><label class="fld"><span>Auflösung beim Hochladen von Plänen</span><select data-s="planRes" onchange="App.setS(this)">${[['','Standard – 3500 px (empfohlen)'],['hoch','Hoch – 5000 px (schärfer, ca. doppelter Speicher)']].map(x=>opt(x,s.planRes||'')).join('')}</select></label><p class="sm mut">PDF-Seiten werden beim Hochladen in Bilder umgewandelt und offline gespeichert; das Original-PDF wird nicht gespeichert. Große Pläne belegen ca. 0,5–2 MB pro Seite und sind in der Sicherung (JSON) enthalten.</p></div>
  <div class="card"><h3>Fotos & Standort</h3><label class="fld"><span>Standort bei Kamera-Aufnahme</span><select data-s="geoCam" onchange="App.setS(this)">${[['','verwenden, wenn das Foto selbst kein GPS enthält (empfohlen)'],['aus','nicht verwenden']].map(x=>opt(x,s.geoCam||'')).join('')}</select></label><p class="sm mut">GPS-Daten (EXIF) werden beim Hinzufügen aus dem Originalfoto gelesen, bevor es verkleinert wird. Fotos mit Standort erscheinen automatisch als 📷-Pin auf eingemessenen Plänen. Hinweis: Manche Handys entfernen den Standort beim Teilen oder beim Auswählen aus der Galerie.</p></div>
  <div class="card"><h3>Sonstiges</h3><div class="btnrow"><button class="btn sec" onclick="App.loadSample()">Beispieldaten laden</button><button class="btn dan" onclick="App.wipe()">Alle Daten löschen</button></div><p class="sm mut" style="margin-top:12px">Bauleiter-App Version ${VERSION} · Tipp: Im Browser-Menü „Zum Startbildschirm hinzufügen“ wählen, dann startet sie wie eine App.</p></div>`}
@@ -1167,8 +1168,58 @@ function setupManifest(){try{const icon="data:image/svg+xml,"+encodeURIComponent
  const m={name:'Bauleiter-App',short_name:'Bauleiter',lang:'de',display:'standalone',start_url:location.href.split('#')[0],background_color:'#f2f4f7',theme_color:'#1f4e79',icons:[{src:icon,sizes:'any',type:'image/svg+xml',purpose:'any'}]};
  if(location.protocol.startsWith('http')){const l=document.createElement('link');l.rel='manifest';l.href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify(m));document.head.appendChild(l)}
  const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d');x.fillStyle='#1f4e79';x.fillRect(0,0,180,180);x.fillStyle='#ffb300';x.beginPath();x.arc(90,112,40,Math.PI,0);x.fill();x.fillRect(34,112,112,17);const a=document.createElement('link');a.rel='apple-touch-icon';a.href=c.toDataURL('image/png');document.head.appendChild(a)}catch(e){}}
+/* ================= Foto-Ordner automatisch (v1.5) ================= */
+/* Eigene kleine IndexedDB nur für Ordner-Handle, Einstellungen und bekannte Dateien – die App-Datenbank bleibt unverändert. */
+const FA={db:null,busy:false,last:''};
+function faOpen(){if(FA.db)return Promise.resolve(FA.db);return new Promise((res,rej)=>{const r=indexedDB.open('bauleiter-fotoauto',1);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv')};r.onsuccess=()=>{FA.db=r.result;res(FA.db)};r.onerror=()=>rej(r.error)})}
+async function faGet(k){const d=await faOpen();return new Promise((res,rej)=>{const q=d.transaction('kv','readonly').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function faSet(k,v){const d=await faOpen();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})}
+function faDefaultPlan(pid){const pls=S.plans.filter(p=>p.projectId===pid);return (pls.find(p=>/Modulaufteilung/i.test(p.name||''))||pls[0]||{}).id||''}
+function fotoAutoCard(){const c=FA.cfg||{};const pr=S.projects;const pid=c.projectId||'';const pls=S.plans.filter(p=>p.projectId===pid);
+ return `<div class="card"><h3>Foto-Ordner (automatischer Import)</h3><p class="sm">Fotos (JPG/PNG) aus einem Ordner auf diesem Rechner inkl. Unterordnern werden automatisch übernommen (beim Start und mit „Fotos aktualisieren“). Fotos mit GPS erscheinen automatisch auf allen georeferenzierten Plänen des Projekts. Bereits übernommene Fotos werden übersprungen. Nur in Chrome/Edge.</p>
+ <label class="fld"><span>Projekt</span><select onchange="App.faSetProj(this.value)"><option value="">– bitte wählen –</option>${pr.map(p=>`<option value="${esc(p.id)}"${p.id===pid?' selected':''}>${esc(p.name||p.id)}</option>`).join('')}</select></label>
+ <label class="fld"><span>Fotos zuordnen zu Plan</span><select onchange="App.faSetPlan(this.value)">${pls.map(p=>`<option value="${esc(p.id)}"${p.id===c.planId?' selected':''}>${esc(p.name||p.id)}</option>`).join('')}</select></label>
+ <p class="sm mut">Ordner: ${c.dirName?esc(c.dirName):'noch keiner verbunden'}</p>${FA.last?`<p class="sm">${esc(FA.last)}</p>`:''}${(c.ohne||[]).length?`<details><summary class="sm">ohne Position (${c.ohne.length})</summary><p class="sm mut">${c.ohne.map(esc).join('<br>')}</p></details>`:''}
+ <div class="btnrow"><button class="btn" onclick="App.faConnect()">📁 Fotoordner verbinden</button><button class="btn sec" onclick="App.faSync(true)">🔄 Fotos aktualisieren</button></div></div>`}
+async function faLoadCfg(){try{FA.cfg=(await faGet('cfg'))||{}}catch(e){FA.cfg={}}return FA.cfg}
+async function faSaveCfg(){await faSet('cfg',FA.cfg)}
+App.faSetProj=async v=>{await faLoadCfg();FA.cfg.projectId=v;FA.cfg.planId=faDefaultPlan(v);await faSaveCfg();render()};
+App.faSetPlan=async v=>{await faLoadCfg();FA.cfg.planId=v;await faSaveCfg()};
+App.faConnect=async()=>{if(!window.showDirectoryPicker){alert('Ihr Browser unterstützt keinen Ordnerzugriff. Bitte Chrome oder Edge verwenden.');return}
+ try{const h=await window.showDirectoryPicker({id:'bauleiter-fotos',mode:'read'});await faSet('dir',h);await faLoadCfg();FA.cfg.dirName=h.name;
+  if(!FA.cfg.projectId){const p=S.projects.find(p=>/Schafh/i.test(p.name||''))||S.projects[0];if(p){FA.cfg.projectId=p.id;FA.cfg.planId=faDefaultPlan(p.id)}}
+  await faSaveCfg();await App.faSync(true)}catch(e){if(e&&e.name!=='AbortError')toast(e.message)}};
+async function* faWalk(dir,pre){for await(const [name,h] of dir.entries()){if(h.kind==='directory')yield* faWalk(h,pre+name+'/');else if(/\.(jpe?g|png)$/i.test(name))yield {h,rel:pre+name,sub:pre.replace(/\/$/,'')}}}
+App.faSync=async(interactive)=>{if(FA.busy)return;await faLoadCfg();let dir;try{dir=await faGet('dir')}catch(e){}
+ if(!dir){if(interactive)toast('Bitte zuerst „Fotoordner verbinden“');return}
+ const c=FA.cfg;if(!c.projectId){if(interactive)toast('Bitte im Foto-Ordner ein Projekt wählen');return}
+ let perm=await dir.queryPermission({mode:'read'});if(perm!=='granted'&&interactive)perm=await dir.requestPermission({mode:'read'});
+ if(perm!=='granted'){if(!interactive)toast('Foto-Ordner: zum Aktualisieren unter Einstellungen „Fotos aktualisieren“ klicken');return}
+ FA.busy=true;let neu=0,ohne=0,err=0;const known=new Set((await faGet('known'))||[]);
+ try{await faDedupe()}catch(e){}
+ const have=new Set(S.photometa.filter(m=>m.projectId===c.projectId&&m.file).map(m=>m.file+'|'+(m.taken||'')));
+ const ohneL=new Set(c.ohne||[]);
+ try{for await(const {h,rel,sub} of faWalk(dir,'')){try{const f=await h.getFile();const key=rel+'|'+f.size+'|'+f.lastModified;if(known.has(key))continue;
+   let ex=null;try{ex=exifRead(await f.slice(0,262144).arrayBuffer())}catch(e){}
+   if(have.has(f.name+'|'+((ex&&ex.taken)||''))){known.add(key);continue}
+   const id='ph_fa_'+uid();const pm=await pmFromFile(f,id,c.projectId,{own:'plan',planId:c.planId||faDefaultPlan(c.projectId),page:1,file:f.name,ordner:sub||''});
+   const data=await fileToImage(f);await dbPut('photos',{id,data,createdAt:new Date().toISOString()});photoCache.set(id,data);
+   known.add(key);have.add(f.name+'|'+((pm&&pm.taken)||''));neu++;if(!(pm&&pm.gps)){ohne++;ohneL.add(rel)}
+   if(neu%10===0){await faSet('known',[...known]);toast('Foto-Ordner: '+neu+' neue Fotos …')}}catch(e){err++}}}
+ finally{await faSet('known',[...known]);c.ohne=[...ohneL];c.lastSync=new Date().toISOString();await faSaveCfg();FA.busy=false}
+ FA.last=`Letzte Aktualisierung ${new Date().toLocaleString('de-DE')}: ${neu} neue Fotos importiert, ${ohne} ohne GPS (ohne Position)${err?', '+err+' Fehler':''}.`;
+ toast(neu||interactive?`${neu} neue Fotos importiert, ${ohne} ohne GPS`:'Foto-Ordner: keine neuen Fotos');if(neu||interactive)render()};
+async function fotoAutoStart(){try{await faLoadCfg();await App.faSync(false)}catch(e){}}
+/* Dublettenabgleich in beide Richtungen: gleicher Dateiname + Aufnahmezeit + GPS im selben Projekt.
+   Entfernt werden ausschließlich automatisch übernommene Kopien (ph_fa_…); manuell importierte Fotos bleiben immer erhalten. */
+const faSig=m=>m.file?[m.projectId,m.file,m.taken||'',m.gps?(+m.gps.lat).toFixed(5)+','+(+m.gps.lon).toFixed(5):''].join('|'):'';
+async function faDedupe(){const g=new Map();for(const m of S.photometa){const s=faSig(m);if(!s)continue;(g.get(s)||g.set(s,[]).get(s)).push(m)}
+ let n=0;for(const arr of g.values()){if(arr.length<2)continue;const keep=arr.find(m=>!String(m.id).startsWith('ph_fa_'))||arr.slice().sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)))[0];
+  for(const m of arr)if(m!==keep&&String(m.id).startsWith('ph_fa_')){await dbDel('photos',m.id);photoCache.delete(m.id);n++}}
+ return n}
+{const orig=App.importData;App.importData=mode=>{orig(mode);const i=$('#fileAny');const h=i.onchange;if(!h)return;i.onchange=async(...a)=>{await h.apply(i,a);try{const n=await faDedupe();if(n){toast(n+' doppelte Fotos (aus Foto-Ordner) entfernt');render()}}catch(e){}}}}
 async function boot(){try{db=await openDB();await loadAll()}catch(e){$('#main').innerHTML=`<div class="card"><b>Lokaler Speicher nicht verfügbar.</b><br>${esc(e.message)}<br>Bitte die App nicht im privaten Modus öffnen.</div>`;return}
- setupManifest();buildNav();window.addEventListener('hashchange',render);await render();window.__appReady=true}
+ setupManifest();buildNav();window.addEventListener('hashchange',render);await render();window.__appReady=true;fotoAutoStart()}
 boot();
 </script>
 <!-- pdf.js 3.11.174 (Mozilla, Apache-2.0), gzip+base64, wird nur beim Hochladen eines PDF-Plans entpackt -->
