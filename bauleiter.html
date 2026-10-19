@@ -253,7 +253,7 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 <style id="pageStyle"></style>
 <script>
 'use strict';
-const VERSION='1.6.1';
+const VERSION='1.6.2';
 /* ================= Hilfsfunktionen ================= */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -983,9 +983,9 @@ App.cctvSetup=async()=>{try{if(S.settings.cctvNur){const n=await cctvApply(false
 function photoPinsFor(pl,pg,own,allTh){const geo=pageGeo(pl,pg);const out=[];own=own||photoOwners();const thF=!allTh&&PHF.thema;
  for(const m of S.photometa){const ow=own.get(m.id);if(!ow)continue;if((m.projectId||ow.pid)!==pl.projectId)continue;
   const man=(m.pins||[]).find(p=>p.planId===pl.id&&(p.page||1)===pg);
-  if(thF&&!tagPasst(pl,m))continue; /* v1.6: z. B. CCTV-Plan nur Mastfotos */
+  const nt=thF&&planNurTag(pl);if(nt&&!hasTag(m,nt))continue; /* v1.6: z. B. CCTV-Plan nur Mastfotos */
   if(man){if(man.hidden)continue;out.push({m,ow,x:man.x,y:man.y,src:'man',ang:geo&&m.gps&&m.gps.dir!=null?geoDirAngle(geo,m.gps.dir):null});continue}
-  if(thF&&!themaPasst(pl,m))continue;
+  if(thF&&!nt&&!themaPasst(pl,m))continue; /* v1.6.2: auf Plänen mit Markierungs-Filter (CCTV) zählt nur die Markierung, nicht das Foto-Thema */
   if(geo&&m.gps){const [x,y]=geoToPlan(geo,m.gps.lat,m.gps.lon);if(x>=0&&y>=0&&x<=1&&y<=1)out.push({m,ow,x,y,src:m.gps.src==='geo'?'geo':'gps',ang:m.gps.dir!=null?geoDirAngle(geo,m.gps.dir):null})}}
  return out}
 function phFilt(l){const f=PHF;return l.filter(p=>{const d=phDate(p.m,p.ow);if(f.day)return (p.ow.k==='tagebuch'&&p.ow.date===f.day)||d===f.day;if(f.von&&d<f.von)return false;if(f.bis&&d>f.bis)return false;return true})}
