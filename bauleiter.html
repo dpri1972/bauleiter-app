@@ -253,7 +253,7 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 <style id="pageStyle"></style>
 <script>
 'use strict';
-const VERSION='1.6';
+const VERSION='1.6.1';
 /* ================= Hilfsfunktionen ================= */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1043,9 +1043,10 @@ App.plThemenSave=async()=>{const pl=PV.pl;pl.phThemen=[...document.querySelector
 App.plThemenReset=async()=>{const pl=PV.pl;delete pl.phThemen;await save('plans',pl);App.closeModal();App.phf('thema',PHF.thema)};
 App.phf=(k,v)=>{PHF[k]=v;if(k==='day'&&v){PHF.von='';PHF.bis=''}if((k==='von'||k==='bis')&&v)PHF.day='';const f=$('#pvFilt');if(f&&PV){f.outerHTML=pvFiltBar(proj(PV.pl.projectId),PV.pl)}pvPhotoPins()};
 function cpinTap(ids){const l=ids.split(',');if(l.length>1){const v=PV;const ps=(v.phVis||[]).filter(p=>l.includes(p.m.id));if(!ps.length)return;const X=ps.reduce((s,p)=>s+p.x,0)/ps.length*v.w,Y=ps.reduce((s,p)=>s+p.y,0)/ps.length*v.h;const r=v.st.getBoundingClientRect();
-  const span=Math.max(...ps.map(p=>Math.hypot(p.x*v.w-X,p.y*v.h-Y)),1);if(v.s*span*2>60&&v.s>=Math.max(4,pvFitScale())*0.98)return phListModal(ps);const ns=Math.min(Math.max(4,pvFitScale()),Math.max(v.s*2.5,80/span));v.s=ns;v.tx=r.width/2-X*ns;v.ty=r.height/2-Y*ns;pvApply();PVSC=0;pvScaleHook();return}
+  const span=Math.max(...ps.map(p=>Math.hypot(p.x*v.w-X,p.y*v.h-Y)),0.01);const cap=Math.max(4,pvFitScale()); /* v1.6.1: Fotos an (fast) gleicher Stelle lassen sich durch Zoomen nie trennen → direkt als Liste öffnen; ebenso bei maximalem Zoom */
+  if(v.s>=cap*0.98||span*2*cap<40)return phListModal(ps);const ns=Math.min(cap,Math.max(v.s*2.5,80/span));v.s=ns;v.tx=r.width/2-X*ns;v.ty=r.height/2-Y*ns;pvApply();PVSC=0;pvScaleHook();return}
  photoPinPopup(l[0])}
-function phListModal(ps){openModal(`<h3>📷 ${ps.length} Fotos an dieser Stelle</h3><div class="photos">${ps.map(p=>`<div class="ph"><img data-photo="${p.m.id}" alt="Foto" onclick="App.phPop('${p.m.id}')"></div>`).join('')}</div><div class="btnrow"><button class="btn sec blk" onclick="App.closeModal()">Schließen</button></div>`)}
+function phListModal(ps){ps=ps.slice().sort((a,b)=>(a.m.taken||'').localeCompare(b.m.taken||''));openModal(`<h3>📷 ${ps.length} Fotos an dieser Stelle</h3><div class="photos">${ps.map(p=>`<div class="ph" title="${esc([p.m.mast,fmtDT(p.m.taken)].filter(Boolean).join(' · '))}"><img data-photo="${p.m.id}" alt="Foto" onclick="App.phPop('${p.m.id}')"></div>`).join('')}</div><p class="sm mut">${esc([...new Set(ps.map(p=>p.m.mast).filter(Boolean))].join(', '))}${ps.some(p=>p.m.mast)?' · ':''}Foto antippen zum Öffnen</p><div class="btnrow"><button class="btn sec blk" onclick="App.closeModal()">Schließen</button></div>`)}
 App.phPop=id=>photoPinPopup(id);
 function photoPinPopup(id){const v=PV;const p=(v&&v.phAll||[]).find(q=>q.m.id===id);if(!p)return App.viewPhoto(id);const m=p.m,ow=p.ow;
  const srcTxt=p.src==='man'?'manuell im Plan gesetzt':p.src==='geo'?`automatisch – Handy-Standort bei Aufnahme${m.gps.acc?' (±'+fmtM(m.gps.acc)+')':''}`:`automatisch per Foto-GPS${m.gps.acc?' (±'+fmtM(m.gps.acc)+')':''}`;
