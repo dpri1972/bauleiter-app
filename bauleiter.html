@@ -253,7 +253,7 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 <style id="pageStyle"></style>
 <script>
 'use strict';
-const VERSION='1.5';
+const VERSION='1.6';
 /* ================= Hilfsfunktionen ================= */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -962,9 +962,28 @@ const themaLabel=t=>(THEMEN.find(x=>x[0]===t)||[0,'ohne Thema'])[1];
 function planThemenDefault(pl){const n=(pl&&pl.name||'')+' '+(pl&&pl.category||'');if(/Erdarbeiten|Erdung\s*Übersicht|Kabelgraben/i.test(pl.name||''))return ['kabel'];if(/Rammplan|Ramming/i.test(pl.name||''))return ['ramm'];if(/Modulaufteilung|Modulbelegung|Strangplan/i.test(pl.name||''))return ['module'];if(/Baustelleneinrichtung|CCTV/i.test(pl.name||''))return ['sonst'];return null}
 const planThemen=pl=>Array.isArray(pl.phThemen)?(pl.phThemen.length?pl.phThemen:null):planThemenDefault(pl); /* null = alle Themen */
 const themaPasst=(pl,m)=>{const t=planThemen(pl);return !t||!m.thema||t.includes(m.thema)};
+/* ---- v1.6: Plan zeigt nur markierte Fotos (CCTV-Plan: nur CCTV-Mastfotos). Nichts wird gelöscht – die Fotos werden nur auf diesem Plan nicht angezeigt. ---- */
+const CCTV_FOTOS={"20261001_093513.jpg|2026-10-01T09:35:13": "PTZ 1.65", "20261001_093529.jpg|2026-10-01T09:35:29": "PTZ 1.65", "20261001_093837.jpg|2026-10-01T09:38:37": "PTZ 1.64", "20261001_093847.jpg|2026-10-01T09:38:47": "PTZ 1.64", "20261002_131537.jpg|2026-10-02T13:15:37": "PTZ 1.62", "20261002_131605.jpg|2026-10-02T13:16:05": "PTZ 1.62", "20261002_131618.jpg|2026-10-02T13:16:18": "PTZ 1.62", "20261002_132332.jpg|2026-10-02T13:23:32": "PTZ 1.63", "20261002_132429.jpg|2026-10-02T13:24:29": "PTZ 1.63", "20261002_132955.jpg|2026-10-02T13:29:55": "PTZ 1.58", "20261002_133004.jpg|2026-10-02T13:30:04": "PTZ 1.58", "20261002_133026.jpg|2026-10-02T13:30:26": "PTZ 1.58", "20261002_133213.jpg|2026-10-02T13:32:13": "Bullet 1.59–1.61", "20261002_133229.jpg|2026-10-02T13:32:29": "Bullet 1.59–1.61", "20261002_134149.jpg|2026-10-02T13:41:49": "PTZ 1.57", "20261002_134156.jpg|2026-10-02T13:41:56": "PTZ 1.57", "20261006_155348.jpg|2026-10-06T15:53:48": "PTZ 1.37", "20261006_155415.jpg|2026-10-06T15:54:15": "PTZ 1.37", "20261006_155602.jpg|2026-10-06T15:56:02": "Bullet 1.36", "20261006_155627.jpg|2026-10-06T15:56:27": "Bullet 1.36", "20261006_160359.jpg|2026-10-06T16:03:59": "PTZ 1.34", "20261006_160422.jpg|2026-10-06T16:04:22": "PTZ 1.34", "20261007_110020.jpg|2026-10-07T11:00:20": "PTZ 1.44", "20261007_110024.jpg|2026-10-07T11:00:24": "PTZ 1.44", "20261007_111740.jpg|2026-10-07T11:17:40": "PTZ 1.53", "20261007_111752.jpg|2026-10-07T11:17:52": "PTZ 1.53", "20261007_112248.jpg|2026-10-07T11:22:48": "PTZ 1.52", "20261007_112322.jpg|2026-10-07T11:23:22": "PTZ 1.52", "20261007_112335.jpg|2026-10-07T11:23:35": "PTZ 1.52", "20261007_113035.jpg|2026-10-07T11:30:35": "Bullet 1.49–1.51", "20261007_113109.jpg|2026-10-07T11:31:09": "Bullet 1.49–1.51", "20261007_113153.jpg|2026-10-07T11:31:53": "Bullet 1.49–1.51", "20261013_121228.jpg|2026-10-13T12:12:28": "PTZ 1.56", "20261013_121241.jpg|2026-10-13T12:12:41": "PTZ 1.56"}; /* Dateiname|Aufnahmezeit → Mast */
+const isCctvPlan=pl=>/CCTV/i.test((pl&&pl.name)||'');
+const planNurTag=pl=>pl&&pl.phNurTag!==undefined?pl.phNurTag:(S.settings.cctvNur&&isCctvPlan(pl)?'cctv':''); /* '' = alle Fotos */
+const hasTag=(m,t)=>(m.tags||[]).includes(t);
+const tagPasst=(pl,m)=>{const t=planNurTag(pl);return !t||hasTag(m,t)};
+const CCTV_ORDNER=/(^|\/)[^\/]*\b(CCTV|Masten?)\b/i; /* Unterordner mit „CCTV“ oder „Mast“ im Namen → automatisch Mastfoto */
+function cctvAutoTag(m){if(hasTag(m,'cctv')||(m.tagsOff||[]).includes('cctv'))return false;const mast=CCTV_FOTOS[(m.file||'')+'|'+(m.taken||'')];if(!mast&&!CCTV_ORDNER.test(m.ordner||''))return false;m.tags=[...(m.tags||[]),'cctv'];if(mast&&!m.mast)m.mast=mast;return true}
+async function cctvApply(first){const cpl=S.plans.filter(isCctvPlan).map(p=>p.id);let n=0;
+ for(const m0 of [...S.photometa]){const m=clone(m0);let ch=cctvAutoTag(m);
+  if(first&&hasTag(m,'cctv')&&(m.pins||[]).some(p=>p.hidden&&cpl.includes(p.planId))){m.pins=m.pins.filter(p=>!(p.hidden&&cpl.includes(p.planId)));ch=true} /* früher ausgeblendete Mastfotos wieder zeigen */
+  if(ch){await pmSave(m);n++}}return n}
+async function cctvFirst(){if(S.settings.cctvNur||!S.plans.some(isCctvPlan))return false;
+ toast('Vor der Umstellung des CCTV-Plans wird eine Sicherung heruntergeladen …');await App.exportData(); /* bricht bei Fehler ab – dann wird nichts umgestellt */
+ await cctvApply(true);S.settings.cctvNur=new Date().toISOString();await saveSettings();return true}
+const cctvCount=()=>S.photometa.filter(m=>hasTag(m,'cctv')).length;
+App.phTag=async(id,t,on)=>{const m=clone(pmOf(id)||{id});const tg=new Set(m.tags||[]),off=new Set(m.tagsOff||[]);if(on){tg.add(t);off.delete(t)}else{tg.delete(t);off.add(t)}m.tags=[...tg];m.tagsOff=[...off];if(!m.tagsOff.length)delete m.tagsOff;await pmSave(m);pvPhotoPins();toast(on?'Als CCTV-Mastfoto markiert':'Markierung entfernt – Foto erscheint nicht mehr auf dem CCTV-Plan')};
+App.cctvSetup=async()=>{try{if(S.settings.cctvNur){const n=await cctvApply(false);toast(n?n+' Fotos neu als Mastfoto markiert':'CCTV-Plan ist schon eingerichtet');render();return}if(await cctvFirst()){toast('CCTV-Plan zeigt jetzt nur noch Mastfotos ('+cctvCount()+')');render()}else toast('Kein Plan mit „CCTV“ im Namen gefunden')}catch(e){alert('Abgebrochen, nichts geändert: '+(e&&e.message||e))}};
 function photoPinsFor(pl,pg,own,allTh){const geo=pageGeo(pl,pg);const out=[];own=own||photoOwners();const thF=!allTh&&PHF.thema;
  for(const m of S.photometa){const ow=own.get(m.id);if(!ow)continue;if((m.projectId||ow.pid)!==pl.projectId)continue;
   const man=(m.pins||[]).find(p=>p.planId===pl.id&&(p.page||1)===pg);
+  if(thF&&!tagPasst(pl,m))continue; /* v1.6: z. B. CCTV-Plan nur Mastfotos */
   if(man){if(man.hidden)continue;out.push({m,ow,x:man.x,y:man.y,src:'man',ang:geo&&m.gps&&m.gps.dir!=null?geoDirAngle(geo,m.gps.dir):null});continue}
   if(thF&&!themaPasst(pl,m))continue;
   if(geo&&m.gps){const [x,y]=geoToPlan(geo,m.gps.lat,m.gps.lon);if(x>=0&&y>=0&&x<=1&&y<=1)out.push({m,ow,x,y,src:m.gps.src==='geo'?'geo':'gps',ang:m.gps.dir!=null?geoDirAngle(geo,m.gps.dir):null})}}
@@ -1030,7 +1049,7 @@ function phListModal(ps){openModal(`<h3>📷 ${ps.length} Fotos an dieser Stelle
 App.phPop=id=>photoPinPopup(id);
 function photoPinPopup(id){const v=PV;const p=(v&&v.phAll||[]).find(q=>q.m.id===id);if(!p)return App.viewPhoto(id);const m=p.m,ow=p.ow;
  const srcTxt=p.src==='man'?'manuell im Plan gesetzt':p.src==='geo'?`automatisch – Handy-Standort bei Aufnahme${m.gps.acc?' (±'+fmtM(m.gps.acc)+')':''}`:`automatisch per Foto-GPS${m.gps.acc?' (±'+fmtM(m.gps.acc)+')':''}`;
- openModal(`<h3>📷 Foto</h3><img class="big" data-photo="${id}" alt="Foto" onclick="App.viewPhoto('${id}')"><p class="sm"><b>${esc(fmtDT(m.taken)||fmtD(ow.date)||'')}</b><br>Quelle: ${ow.href?`<a href="${ow.href}" onclick="App.closeModal()">${esc(ow.label)}</a>`:esc(ow.label)}<br><label class="sm">Thema <select onchange="App.phThema('${id}',this.value)">${opt(['','– ohne Thema –'],m.thema||'')}${THEMEN.map(x=>opt(x,m.thema||'')).join('')}</select></label>${m.thema&&!themaPasst(v.pl,m)?' <span class="sm mut">(passt nicht zu diesem Plan)</span>':''}<br><span class="mut">Position: ${esc(srcTxt)}${m.gps&&m.gps.dir!=null?' · Blickrichtung '+Math.round(m.gps.dir)+'°':''}</span></p>
+ openModal(`<h3>📷 Foto</h3><img class="big" data-photo="${id}" alt="Foto" onclick="App.viewPhoto('${id}')"><p class="sm"><b>${esc(fmtDT(m.taken)||fmtD(ow.date)||'')}</b><br>Quelle: ${ow.href?`<a href="${ow.href}" onclick="App.closeModal()">${esc(ow.label)}</a>`:esc(ow.label)}<br><label class="sm">Thema <select onchange="App.phThema('${id}',this.value)">${opt(['','– ohne Thema –'],m.thema||'')}${THEMEN.map(x=>opt(x,m.thema||'')).join('')}</select></label>${m.thema&&!themaPasst(v.pl,m)?' <span class="sm mut">(passt nicht zu diesem Plan)</span>':''}<br><label class="cbl sm"><input type="checkbox" ${hasTag(m,'cctv')?'checked':''} onchange="App.phTag('${id}','cctv',this.checked)"> 📹 CCTV-Mastfoto${m.mast?' ('+esc(m.mast)+')':''}</label><br><span class="mut">Position: ${esc(srcTxt)}${m.gps&&m.gps.dir!=null?' · Blickrichtung '+Math.round(m.gps.dir)+'°':''}</span></p>
  <div class="btnrow">${ow.href&&ow.k!=='plan'?`<button class="btn sm" onclick="App.closeModal();go('${ow.href}')">${ow.k==='tagebuch'?'Tagebuch öffnen':ow.k==='mangel'?'Mangel öffnen':'Öffnen'}</button>`:''}<button class="btn sm sec" onclick="App.viewPhoto('${id}')">Foto groß</button><button class="btn sm sec" onclick="App.phMove('${id}')">Verschieben</button><button class="btn sm dan" onclick="App.phUnpin('${id}')">Vom Plan entfernen</button>${ow.k==='plan'?`<button class="btn sm dan" onclick="App.phDelete('${id}')">Foto löschen</button>`:''}</div><div class="btnrow"><button class="btn sec blk" onclick="App.closeModal()">Schließen</button></div>`)}
 App.phThema=async(id,t)=>{const m=clone(pmOf(id)||{id});if(t)m.thema=t;else delete m.thema;await pmSave(m);pvPhotoPins();if(m.thema&&PV&&!themaPasst(PV.pl,m)&&PHF.thema)toast('Thema passt nicht zu diesem Plan – Foto wird hier ausgeblendet');};
 App.phMove=id=>{App.closeModal();if(PV.mode!=='foto')pvSetMode('foto');PV.focusPh=id;pvPhotoPins();toast('Kamera-Pin mit dem Finger an die richtige Stelle ziehen')};
@@ -1180,7 +1199,8 @@ function fotoAutoCard(){const c=FA.cfg||{};const pr=S.projects;const pid=c.proje
  <label class="fld"><span>Projekt</span><select onchange="App.faSetProj(this.value)"><option value="">– bitte wählen –</option>${pr.map(p=>`<option value="${esc(p.id)}"${p.id===pid?' selected':''}>${esc(p.name||p.id)}</option>`).join('')}</select></label>
  <label class="fld"><span>Fotos zuordnen zu Plan</span><select onchange="App.faSetPlan(this.value)">${pls.map(p=>`<option value="${esc(p.id)}"${p.id===c.planId?' selected':''}>${esc(p.name||p.id)}</option>`).join('')}</select></label>
  <p class="sm mut">Ordner: ${c.dirName?esc(c.dirName):'noch keiner verbunden'}</p>${FA.last?`<p class="sm">${esc(FA.last)}</p>`:''}${(c.ohne||[]).length?`<details><summary class="sm">ohne Position (${c.ohne.length})</summary><p class="sm mut">${c.ohne.map(esc).join('<br>')}</p></details>`:''}
- <div class="btnrow"><button class="btn" onclick="App.faConnect()">📁 Fotoordner verbinden</button><button class="btn sec" onclick="App.faSync(true)">🔄 Fotos aktualisieren</button></div></div>`}
+ <div class="btnrow"><button class="btn" onclick="App.faConnect()">📁 Fotoordner verbinden</button><button class="btn sec" onclick="App.faSync(true)">🔄 Fotos aktualisieren</button></div>
+ <p class="sm">📹 CCTV-Plan: ${S.settings.cctvNur?`zeigt nur CCTV-Mastfotos (${cctvCount()} markiert). Neue Mastfotos: in einen Unterordner mit „CCTV“ oder „Mast“ im Namen legen oder im Foto „📹 CCTV-Mastfoto“ anhaken. Andere Fotos bleiben erhalten und sind auf allen anderen Plänen sichtbar; auf dem CCTV-Plan mit „alle Fotos“ einblendbar.`:'zeigt noch alle Fotos. Beim nächsten „Fotos aktualisieren“ wird zuerst eine Sicherung heruntergeladen, danach zeigt der CCTV-Plan nur noch die CCTV-Mastfotos (es wird nichts gelöscht).'}</p>${S.settings.cctvNur?'':'<div class="btnrow"><button class="btn sec" onclick="App.cctvSetup()">📹 CCTV-Plan jetzt auf Mastfotos umstellen</button></div>'}</div>`}
 async function faLoadCfg(){try{FA.cfg=(await faGet('cfg'))||{}}catch(e){FA.cfg={}}return FA.cfg}
 async function faSaveCfg(){await faSet('cfg',FA.cfg)}
 App.faSetProj=async v=>{await faLoadCfg();FA.cfg.projectId=v;FA.cfg.planId=faDefaultPlan(v);await faSaveCfg();render()};
@@ -1195,6 +1215,7 @@ App.faSync=async(interactive)=>{if(FA.busy)return;await faLoadCfg();let dir;try{
  const c=FA.cfg;if(!c.projectId){if(interactive)toast('Bitte im Foto-Ordner ein Projekt wählen');return}
  let perm=await dir.queryPermission({mode:'read'});if(perm!=='granted'&&interactive)perm=await dir.requestPermission({mode:'read'});
  if(perm!=='granted'){if(!interactive)toast('Foto-Ordner: zum Aktualisieren unter Einstellungen „Fotos aktualisieren“ klicken');return}
+ if(interactive&&!S.settings.cctvNur&&S.plans.some(p=>p.projectId===c.projectId&&isCctvPlan(p))){try{await cctvFirst()}catch(e){alert('Sicherung fehlgeschlagen – CCTV-Plan wurde nicht umgestellt: '+(e&&e.message||e))}}
  FA.busy=true;let neu=0,ohne=0,err=0;const known=new Set((await faGet('known'))||[]);
  try{await faDedupe()}catch(e){}
  const have=new Set(S.photometa.filter(m=>m.projectId===c.projectId&&m.file).map(m=>m.file+'|'+(m.taken||'')));
@@ -1207,6 +1228,7 @@ App.faSync=async(interactive)=>{if(FA.busy)return;await faLoadCfg();let dir;try{
    known.add(key);have.add(f.name+'|'+((pm&&pm.taken)||''));neu++;if(!(pm&&pm.gps)){ohne++;ohneL.add(rel)}
    if(neu%10===0){await faSet('known',[...known]);toast('Foto-Ordner: '+neu+' neue Fotos …')}}catch(e){err++}}}
  finally{await faSet('known',[...known]);c.ohne=[...ohneL];c.lastSync=new Date().toISOString();await faSaveCfg();FA.busy=false}
+ if(S.settings.cctvNur){try{await cctvApply(false)}catch(e){}}
  FA.last=`Letzte Aktualisierung ${new Date().toLocaleString('de-DE')}: ${neu} neue Fotos importiert, ${ohne} ohne GPS (ohne Position)${err?', '+err+' Fehler':''}.`;
  toast(neu||interactive?`${neu} neue Fotos importiert, ${ohne} ohne GPS`:'Foto-Ordner: keine neuen Fotos');if(neu||interactive)render()};
 async function fotoAutoStart(){try{await faLoadCfg();await App.faSync(false)}catch(e){}}
