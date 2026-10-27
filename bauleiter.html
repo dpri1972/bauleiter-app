@@ -188,6 +188,7 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 .cpin b:before{content:'';position:absolute;left:0;top:-34px;border-left:13px solid transparent;border-right:13px solid transparent;border-bottom:40px solid rgba(2,119,189,.8)}
 .cpin.man b:before{border-bottom-color:rgba(106,27,154,.75)}
 .cpin.clu i{width:36px;height:36px;left:-18px;top:-18px;background:#37474f;line-height:32px}.cpin.clu i span{line-height:32px}
+.cpin.stc i{left:19px}.cpin.clu.stc i{left:16px}/* v1.8.2: Stations-Pin rechts neben der Stationsmarke */
 .cpin.hl i{box-shadow:0 0 0 4px rgba(255,179,0,.95)}
 .pvstage.drawmode .cpin{pointer-events:none}
 .psnip .cpin.snp{top:var(--sh)!important}
@@ -265,7 +266,7 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 <style id="pageStyle"></style>
 <script>
 'use strict';
-const VERSION='1.8.1';
+const VERSION='1.8.2';
 /* ================= Hilfsfunktionen ================= */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1008,8 +1009,8 @@ const sideOf=deg=>SEITEN[Math.floor((((deg%360)+360+45)%360)/90)];
 function trafoBearing(m,id){const pl=S.plans.find(isTrafoPlan)||trafoBase();const g=pl&&pageGeo(pl,1);const s=TRAFO_ST[id];if(!g||!s||!m.gps)return null;
  const T=g.T,X=s.x*g.W,Y=s.y*g.H,se=T[0]*X+T[1]*Y+T[2],sn=T[3]*X+T[4]*Y+T[5];const [pe,pn]=enu(+m.gps.lat,+m.gps.lon,g.o);const de=pe-se,dn=pn-sn;const d=Math.hypot(de,dn);if(d<1)return null;
  return {deg:(Math.atan2(de,dn)*180/Math.PI+360)%360,d}}
-const photoSide=m=>{if(!m)return '';if(m.seiteMan&&m.seite)return side4(m.seite);const legacy=()=>m.seiteGrad!=null?sideOf(m.seiteGrad):side4(m.seite||'');if(!m.station)return legacy();const b=trafoBearing(m,m.station);return b?sideOf(b.deg):legacy()};
-function seiteSet(m){if(m.seiteMan){if(m.seite&&!SEITEN.includes(m.seite)){m.seite=side4(m.seite);return true}return false}const b=m.station&&m.gps?trafoBearing(m,m.station):null;if(!b){if(m.seite&&!SEITEN.includes(m.seite)){m.seite=m.seiteGrad!=null?sideOf(m.seiteGrad):side4(m.seite);return true}return false}const s=sideOf(b.deg),g=Math.round(b.deg);if(m.seite===s&&m.seiteGrad===g)return false;m.seite=s;m.seiteGrad=g;m.seiteD=Math.round(b.d);return true}
+const photoSide=m=>{if(!m)return '';if(m.seiteMan&&m.seite)return side4(m.seite);if(m.seiteQ==='block'&&m.seite)return side4(m.seite);const legacy=()=>m.seiteGrad!=null?sideOf(m.seiteGrad):side4(m.seite||'');if(!m.station)return legacy();const b=trafoBearing(m,m.station);return b?sideOf(b.deg):legacy()};
+function seiteSet(m){if(m.seiteQ==='block'&&!m.seiteMan)return false;if(m.seiteMan){if(m.seite&&!SEITEN.includes(m.seite)){m.seite=side4(m.seite);return true}return false}const b=m.station&&m.gps?trafoBearing(m,m.station):null;if(!b){if(m.seite&&!SEITEN.includes(m.seite)){m.seite=m.seiteGrad!=null?sideOf(m.seiteGrad):side4(m.seite);return true}return false}const s=sideOf(b.deg),g=Math.round(b.deg);if(m.seite===s&&m.seiteGrad===g)return false;m.seite=s;m.seiteGrad=g;m.seiteD=Math.round(b.d);return true}
 function trafoAutoTag(m){let ch=false;
  if(!hasTag(m,'trafo')&&!(m.tagsOff||[]).includes('trafo')&&TRAFO_ORDNER.test(m.ordner||'')){m.tags=[...(m.tags||[]),'trafo'];ch=true}
  if(hasTag(m,'trafo')&&!m.station&&!m.stationOff){const n=trafoNearest(m);if(n&&n.d<=TRAFO_MAXD){m.station=n.id;m.stationD=Math.round(n.d);ch=true}}
@@ -1039,7 +1040,8 @@ function trafoSegment(P){/* P: [{t,vote,dist}] zeitlich sortiert (ein Lauf) → 
   const key=mj.st||'',nx=dp[i+sz].get(key);if(!nx||c<nx.c-1e-9)dp[i+sz].set(key,{c,pi:i,pk:lk})}}
  let bk=null;for(const [k,v] of dp[n])if(!bk||v.c<dp[n].get(bk).c)bk=k;if(bk===null)return null;
  const segs=[];let i=n,k=bk;while(i>0){const e=dp[i].get(k);segs.unshift([e.pi,i]);k=e.pk;i=e.pi}return segs}
-async function trafoBloecke(){
+let TRAFO_BLK=null;
+async function trafoBloecke(){TRAFO_BLK=[];
  const pl=S.plans.find(isTrafoPlan)||trafoBase();const g=pl&&pageGeo(pl,1);if(!g)return 0;
  const tm=m=>{const s=String(m.taken||'').replace(/^(\d{4}):(\d\d):(\d\d)/,'$1-$2-$3').replace(' ','T');return Date.parse(s)};
  const L=S.photometa.filter(m=>hasTag(m,'trafo')&&m.gps&&m.taken&&!m.stationOff).map(m=>({m,t:tm(m),nn:trafoNearest(m)})).filter(x=>isFinite(x.t)).sort((a,b)=>a.t-b.t||((a.m.file||a.m.id)<(b.m.file||b.m.id)?-1:1));
@@ -1068,7 +1070,7 @@ async function trafoBloecke(){
    st=cand.length?cand[0].id:null}
   if(!st||sz<3||sz>5){continue}/* nicht eindeutig → Rückfall auf nächste Station */
   gang.push(st);const a=trafoNr(prev),bb=trafoNr(st);if(a&&bb&&a.ser===bb.ser&&a.i!==bb.i)dirn=Math.sign(bb.i-a.i);prev=st;
-  b.items.forEach(x=>asg.set(x.m.id,st))}
+  b.items.forEach(x=>asg.set(x.m.id,st));TRAFO_BLK.push({ids:b.items.map(x=>x.m.id),st})}
  let n=0;
  for(const m0 of [...S.photometa]){if(!hasTag(m0,'trafo')||m0.stationOff||trafoManual(m0))continue;const m=clone(m0);let want=asg.get(m.id),q=null,ch=false;
   if(want){const s=TRAFO_ST[want],[px,py]=m.gps?geoToPlan(g,+m.gps.lat,+m.gps.lon):[0,0],mpp=g.mpp||Math.sqrt(Math.abs(g.T[0]*g.T[4]-g.T[1]*g.T[3]))||1;
@@ -1078,7 +1080,60 @@ async function trafoBloecke(){
    delete m.stationQ;const nn=trafoNearest(m);if(nn&&nn.d<=TRAFO_MAXD){m.station=nn.id;m.stationD=Math.round(nn.d)}else{delete m.station;delete m.stationD}ch=true}
   if(ch){if(!m.seiteMan){delete m.seite;delete m.seiteGrad;delete m.seiteD}seiteSet(m);await pmSave(m);n++}}
  return n}
-async function trafoApply(){let n=0;for(const m0 of [...S.photometa]){const m=clone(m0);if(trafoAutoTag(m)){await pmSave(m);n++}}n+=await trafoBloecke();return n}
+/* ===== v1.8.2: Aufnahmeseite je 4er-Block aus Sonne + Reihenfolge (GPS-Peilung nur Rückfall/Zusatzinfo) =====
+   Dirk fotografiert je Station 4 Fotos im Kreis: 1 Vorderseite (breit, Beschriftung) → 2 Stirnseite links (schmal, Steuerung) → 3 Rückseite (breit) → 4 Stirnseite rechts (schmal, Schaltanlage), im Uhrzeigersinn.
+   Blöcke = die per Zeitblock (v1.8.1) einer Station zugeordneten Foto-Vierergruppen. Ob die Vorderseite nach S oder N zeigt, entscheidet das Licht (Sonnenstand NOAA + Wärme des Gerätes):
+   Fotos 1+2 sonnig (warmes Weiß) und 3+4 schattig → Vorderseite nach S, sonst nach N. Längsachse der Station = Plan-X-Achse (Peilung aus der Georeferenz).
+   Je Station gespeichert (S.settings.trafoDreh): „Station gedreht“ (0/90/180/270°) und „Laufrichtung gespiegelt“ – gilt für alle Fotos der Station und bleibt nach Sync erhalten.
+   Rückfall auf GPS-Peilung (4 Sektoren wie v1.8): Block ≠ 4 Fotos, kein Licht-Messwert oder niedrige Sicherheit. */
+function sunPos(lat,lon,ms){const R=Math.PI/180,jc=((ms/86400000+2440587.5)-2451545)/36525;
+ const gml=(280.46646+jc*(36000.76983+jc*0.0003032))%360,gma=357.52911+jc*(35999.05029-0.0001537*jc),ecc=0.016708634-jc*(0.000042037+0.0000001267*jc);
+ const eqc=Math.sin(gma*R)*(1.914602-jc*(0.004817+0.000014*jc))+Math.sin(2*gma*R)*(0.019993-0.000101*jc)+Math.sin(3*gma*R)*0.000289;
+ const om=125.04-1934.136*jc,al=gml+eqc-0.00569-0.00478*Math.sin(om*R);
+ let oc=23+(26+((21.448-jc*(46.815+jc*(0.00059-jc*0.001813))))/60)/60;oc+=0.00256*Math.cos(om*R);
+ const decl=Math.asin(Math.sin(oc*R)*Math.sin(al*R))/R,vy=Math.tan(oc*R/2)**2;
+ const eot=4*(vy*Math.sin(2*gml*R)-2*ecc*Math.sin(gma*R)+4*ecc*vy*Math.sin(gma*R)*Math.cos(2*gml*R)-0.5*vy*vy*Math.sin(4*gml*R)-1.25*ecc*ecc*Math.sin(2*gma*R))/R;
+ const utc=((ms/60000)%1440+1440)%1440,tst=((utc+eot+4*lon)%1440+1440)%1440,ha=tst/4-180;
+ const cz=Math.sin(lat*R)*Math.sin(decl*R)+Math.cos(lat*R)*Math.cos(decl*R)*Math.cos(ha*R),zen=Math.acos(Math.max(-1,Math.min(1,cz)))/R;
+ const ac=Math.acos(Math.max(-1,Math.min(1,(Math.sin(lat*R)*cz-Math.sin(decl*R))/(Math.cos(lat*R)*Math.sin(zen*R)))))/R;
+ return {az:ha>0?(ac+180)%360:(540-ac)%360,el:90-zen}}
+/* Licht-Kennzahl: Wärme des weißen/grauen Gerätes in der Bildmitte ((R−B)/Mittelwert). besonnt > 0, beschattet < 0 */
+async function litScore(id){const d=await getPhoto(id);if(!d)return null;const img=new Image();img.src=d;try{await img.decode()}catch(e){return null}
+ const sc=Math.min(1,800/Math.max(img.naturalWidth,img.naturalHeight)),W=Math.round(img.naturalWidth*sc),H=Math.round(img.naturalHeight*sc);if(W<20||H<20)return null;
+ const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d',{willReadFrequently:true});cx.drawImage(img,0,0,W,H);
+ const x0=Math.floor(W*.3),x1=Math.floor(W*.7),y0=Math.floor(H*.2),y1=Math.floor(H*.7),px=cx.getImageData(x0,y0,x1-x0,y1-y0).data;
+ let n=0,sr=0,sb=0,sa=0;for(let i=0;i<px.length;i+=4){const r=px[i]/255,g=px[i+1]/255,b=px[i+2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b);if(mx>0.45&&(mx-mn)/(mx+1e-6)<0.22){n++;sr+=r;sb+=b;sa+=r+g+b}}
+ return n<200?null:((sr-sb)/n)/(sa/(3*n))}
+const ANSICHT=['Vorderseite (Beschriftung)','Stirnseite links (Steuerung)','Rückseite','Stirnseite rechts (Schaltanlage)'];
+
+const DREH_NAME=['normal','90° im Uhrzeigersinn','180°','90° gegen den Uhrzeigersinn'];
+const trafoDreh=st=>{const d=(S.settings.trafoDreh||{})[st];return d?{r:(((+d.r||0)%4)+4)%4,m:!!d.m}:{r:0,m:false}};
+const BLK_KEYS=['seiteQ','seiteNr','seiteFront','seiteConf','seiteDreh','seiteGps'];
+async function seiteBlockApply(){
+ if(!TRAFO_BLK)await trafoBloecke();
+ const pl=S.plans.find(isTrafoPlan)||trafoBase();const g=pl&&pageGeo(pl,1);if(!g)return 0;const ax=(Math.atan2(g.T[0],g.T[3])*180/Math.PI+360)%360;
+ let ch=0;const done=new Set();
+ for(const b of TRAFO_BLK||[]){if(b.ids.length!==4)continue;
+  const ms=b.ids.map(id=>pmOf(id));if(ms.some(m=>!m||!m.gps||!m.taken))continue;
+  const lit=[];for(const m0 of ms){let l=m0.lit;if(l==null){l=await litScore(m0.id);if(l!=null){const m=clone(pmOf(m0.id));m.lit=Math.round(l*1000)/1000;await pmSave(m)}}lit.push(l)}
+  if(lit.some(l=>l==null))continue;
+  const d=(lit[0]+lit[1])-(lit[2]+lit[3]),front=d>0?'S':'N',conf=Math.abs(d)>0.15?'hoch':Math.abs(d)>0.08?'mittel':'niedrig';
+  if(conf==='niedrig')continue; /* Licht nicht eindeutig → GPS-Rückfall */
+  const dr=trafoDreh(b.st),p1=(ax+(front==='S'?90:-90)+360)%360;
+  for(let i=0;i<4;i++){const m0=pmOf(b.ids[i]);if(m0.station!==b.st)continue;const m=clone(m0);
+   const p=(((p1+(dr.m?-1:1)*90*i+90*dr.r)%360)+360)%360,sn=sunPos(+m.gps.lat,+m.gps.lon,Date.parse(String(m.taken).replace(/^(\d{4}):(\d\d):(\d\d)/,'$1-$2-$3').replace(' ','T')));
+   m.lit=Math.round(lit[i]*1000)/1000;m.sonne=[Math.round(sn.az),Math.round(sn.el)];m.seiteNr=i+1;m.seiteFront=front;m.seiteConf=conf;m.seiteDreh=dr.r*90+(dr.m?'s':'');
+   const bb=trafoBearing(m,b.st);if(bb)m.seiteGps=sideOf(bb.deg);else delete m.seiteGps;
+   if(!m.seiteMan){m.seite=sideOf(p);m.seiteGrad=Math.round(p);m.seiteQ='block';delete m.seiteD}
+   done.add(m.id);if(JSON.stringify(m)!==JSON.stringify(m0)){await pmSave(m);ch++}}}
+ /* Rückfall: Fotos, die nicht (mehr) in einem sicheren Vierer-Block liegen → GPS-Peilung */
+ for(const m0 of [...S.photometa]){if(done.has(m0.id)||!(m0.seiteQ==='block'||m0.seiteNr))continue;const m=clone(m0);BLK_KEYS.forEach(k=>delete m[k]);delete m.seiteFront;
+  if(!m.seiteMan){delete m.seite;delete m.seiteGrad;delete m.seiteD;seiteSet(m)}await pmSave(m);ch++}
+ return ch}
+function drehUi(m){const d=trafoDreh(m.station);return `<br><label class="sm">Station gedreht <select class="pvsel" onchange="App.stDreh('${m.station}',this.value,${d.m?1:0},'${m.id}')" aria-label="Station gedreht">${DREH_NAME.map((n,i)=>`<option value="${i}"${d.r===i?' selected':''}>${n}</option>`).join('')}</select></label> <label class="cbl sm"><input type="checkbox" ${d.m?'checked':''} onchange="App.stDreh('${m.station}',${d.r},this.checked?1:0,'${m.id}')"> Laufrichtung gespiegelt</label> <span class="sm mut">gilt für alle Fotos der Station ${esc(m.station)}</span>`}
+App.stDreh=async(st,r,mir,id)=>{r=+r;mir=+mir?1:0;S.settings.trafoDreh=S.settings.trafoDreh||{};if(!r&&!mir)delete S.settings.trafoDreh[st];else S.settings.trafoDreh[st]={r,m:mir};await saveSettings();const n=await seiteBlockApply();pvPhotoPins();if(id&&PV&&(PV.phAll||[]).some(q=>q.m.id===id))photoPinPopup(id);toast('Station '+st+': '+(r||mir?'gedreht '+DREH_NAME[r]+(mir?', Laufrichtung gespiegelt':''):'Standard')+' – '+n+' Fotos aktualisiert')};
+App.seiteBlocks=async()=>{const n=await seiteBlockApply();pvPhotoPins();toast(n?'Aufnahmeseiten aus Sonne + Reihenfolge: '+n+' Fotos aktualisiert':'Aufnahmeseiten: nichts zu ändern')};
+async function trafoApply(){let n=0;for(const m0 of [...S.photometa]){const m=clone(m0);if(trafoAutoTag(m)){await pmSave(m);n++}}n+=await trafoBloecke();try{n+=await seiteBlockApply()}catch(e){console.warn('seiteBlockApply',e)}return n}
 const trafoCount=()=>S.photometa.filter(m=>hasTag(m,'trafo')).length;
 const trafoStationen=()=>new Set(S.photometa.filter(m=>hasTag(m,'trafo')&&m.station).map(m=>m.station));
 async function trafoPlanCreate(){const ex=S.plans.find(isTrafoPlan);if(ex)return ex;const base=trafoBase();if(!base)return null;const pages=[],made=[];let bytes=0;
@@ -1096,8 +1151,8 @@ App.phTag=async(id,t,on)=>{const m=clone(pmOf(id)||{id});const tg=new Set(m.tags
  await pmSave(m);pvPhotoPins();
  if(t==='trafo'){toast(on?'Als Trafostation-Foto markiert'+(m.station?' · '+m.station:''):'Markierung entfernt – Foto erscheint nicht mehr auf dem Plan Trafostationen');if(on&&PV&&(PV.phAll||[]).some(q=>q.m.id===id))photoPinPopup(id)}
  else toast(on?'Als CCTV-Mastfoto markiert':'Markierung entfernt – Foto erscheint nicht mehr auf dem CCTV-Plan')};
-App.phStation=async(id,v)=>{const m=clone(pmOf(id)||{id});if(v){m.station=v;delete m.stationOff;delete m.stationD}else{delete m.station;delete m.stationD;m.stationOff=true}delete m.stationQ;if(!m.seiteMan){delete m.seite;delete m.seiteGrad;delete m.seiteD;seiteSet(m)}await pmSave(m);pvPhotoPins();toast(v?'Station '+v+' zugeordnet':'Stationszuordnung entfernt')};
-App.phSeite=async(id,v)=>{const m=clone(pmOf(id)||{id});if(v){m.seite=v;m.seiteMan=true;delete m.seiteGrad;delete m.seiteD}else{delete m.seiteMan;delete m.seite;delete m.seiteGrad;delete m.seiteD;seiteSet(m)}await pmSave(m);pvPhotoPins();if(PV&&(PV.phAll||[]).some(q=>q.m.id===id))photoPinPopup(id);toast(v?'Aufnahmeseite '+v:'Aufnahmeseite: automatisch'+(m.seite?' ('+m.seite+')':''))};
+App.phStation=async(id,v)=>{const m=clone(pmOf(id)||{id});if(v){m.station=v;delete m.stationOff;delete m.stationD}else{delete m.station;delete m.stationD;m.stationOff=true}delete m.stationQ;BLK_KEYS.forEach(k=>delete m[k]);TRAFO_BLK=null;if(!m.seiteMan){delete m.seite;delete m.seiteGrad;delete m.seiteD;seiteSet(m)}await pmSave(m);pvPhotoPins();toast(v?'Station '+v+' zugeordnet':'Stationszuordnung entfernt')};
+App.phSeite=async(id,v)=>{const m=clone(pmOf(id)||{id});if(v){m.seite=v;m.seiteMan=true;delete m.seiteGrad;delete m.seiteD}else{delete m.seiteMan;delete m.seite;delete m.seiteGrad;delete m.seiteD;seiteSet(m)}await pmSave(m);if(!v){await seiteBlockApply();const q=pmOf(id);if(q&&q.seite)m.seite=q.seite}pvPhotoPins();if(PV&&(PV.phAll||[]).some(q=>q.m.id===id))photoPinPopup(id);toast(v?'Aufnahmeseite '+v:'Aufnahmeseite: automatisch'+(m.seite?' ('+m.seite+')':''))};
 App.cctvSetup=async()=>{try{if(S.settings.cctvNur){const n=await cctvApply(false);toast(n?n+' Fotos neu als Mastfoto markiert':'CCTV-Plan ist schon eingerichtet');render();return}if(await cctvFirst()){toast('CCTV-Plan zeigt jetzt nur noch Mastfotos ('+cctvCount()+')');render()}else toast('Kein Plan mit „CCTV“ im Namen gefunden')}catch(e){alert('Abgebrochen, nichts geändert: '+(e&&e.message||e))}};
 function photoPinsFor(pl,pg,own,allTh){const geo=pageGeo(pl,pg);const out=[];own=own||photoOwners();const thF=!allTh&&PHF.thema;
  for(const m of S.photometa){const ow=own.get(m.id);if(!ow)continue;if((m.projectId||ow.pid)!==pl.projectId)continue;
@@ -1211,9 +1266,17 @@ function fanTap(d){const v=PV;if(!trafoPlanView(v))return false;
  return false}
 function pvPhotoPins(){const v=PV;if(!v)return;const el=$('#pvPh');if(!el)return;const all=photoPinsFor(v.pl,v.pg);v.phAll=all;const l=PHF.show?phFilt(all):[];v.phVis=l;
  const cnt=$('#phCnt');if(cnt)cnt.textContent=all.length?`${l.length} von ${all.length} Fotos sichtbar`:'keine Fotos auf diesem Plan';
- const R=34/(v.s||1);const used=new Set();const out=[];const pts=l.map(p=>({p,X:p.x*v.w,Y:p.y*v.h}));
+ const R=34/(v.s||1);const used=new Set();const out=[];
+ /* v1.8.2: auf dem Plan „Trafostationen“ sitzen alle Fotos einer zugeordneten Station gebündelt an der Stationsposition (nicht an ihrem GPS-Ort);
+    die Zahl im Kreis = Anzahl der Fotos der Station. Nicht zugeordnete und manuell gesetzte Fotos bleiben an ihrem Ort. */
+ const tv=trafoPlanView(v),byS={},pts=[];
+ for(const p of l){const st=p.m.station;if(tv&&p.src!=='man'&&st&&TRAFO_ST[st]){let b=byS[st];if(!b){b=byS[st]={p,X:TRAFO_ST[st].x*v.w,Y:TRAFO_ST[st].y*v.h,mem:[],stc:true,st};pts.push(b)}b.mem.push(p)}else pts.push({p,X:p.x*v.w,Y:p.y*v.h,mem:[p]})}
  const noClu=v.mode==='foto';for(let i=0;i<pts.length;i++){if(used.has(i))continue;const g=[pts[i]];used.add(i);if(!noClu&&pts[i].p.m.id!==v.focusPh)for(let j=i+1;j<pts.length;j++){if(used.has(j)||pts[j].p.m.id===v.focusPh)continue;if(Math.hypot(pts[j].X-pts[i].X,pts[j].Y-pts[i].Y)<R){g.push(pts[j]);used.add(j)}}out.push(g)}
- el.innerHTML=out.map(g=>{if(g.length===1)return cpinHtml(g[0].p,null,v.focusPh===g[0].p.m.id?'hl':'');const X=g.reduce((s,q)=>s+q.X,0)/g.length,Y=g.reduce((s,q)=>s+q.Y,0)/g.length;return `<div class="cpin clu" data-ph="${g.map(q=>q.p.m.id).join(',')}" style="left:${(X/v.w*100).toFixed(4)}%;top:${(Y/v.h*100).toFixed(4)}%"><i><span>${g.length}</span></i></div>`}).join('');try{pvStations();fanRefresh()}catch(e){console.error(e)}}
+ el.innerHTML=out.map(g=>{const mem=g.flatMap(q=>q.mem),stc=g.every(q=>q.stc);
+  if(mem.length===1&&!stc)return cpinHtml(g[0].p,null,v.focusPh===g[0].p.m.id?'hl':'');
+  const X=g.reduce((s,q)=>s+q.X*q.mem.length,0)/mem.length,Y=g.reduce((s,q)=>s+q.Y*q.mem.length,0)/mem.length;
+  if(mem.length===1)return cpinHtml({...g[0].p,x:X/v.w,y:Y/v.h,ang:null},null,'stc');
+  return `<div class="cpin clu${stc?' stc':''}" ${stc&&g.length===1?`data-st="${g[0].st}" `:''}data-ph="${mem.map(q=>q.m.id).join(',')}" style="left:${(X/v.w*100).toFixed(4)}%;top:${(Y/v.h*100).toFixed(4)}%"><i><span>${mem.length}</span></i></div>`}).join('');try{pvStations();fanRefresh()}catch(e){console.error(e)}}
 function pvFiltBar(p,pl){pl=pl||(PV&&PV.pl);const days=[...new Set(S.diary.filter(e=>e.projectId===p.id&&(e.photos||[]).length).map(e=>e.date))].sort().reverse();
  return `<div class="pvfilt" id="pvFilt"><label class="cbl"><input type="checkbox" ${PHF.show?'checked':''} onchange="App.phf('show',this.checked)"> 📷 Fotos</label><select onchange="App.phf('day',this.value)" aria-label="Bautagebuch-Tag"><option value="">alle Tage</option>${days.map(d=>opt([d,'Tagebuch '+fmtD(d)],PHF.day)).join('')}</select><label>von <input type="date" value="${PHF.von}" onchange="App.phf('von',this.value)"></label><label>bis <input type="date" value="${PHF.bis}" onchange="App.phf('bis',this.value)"></label><select onchange="App.phf('thema',this.value==='1')" aria-label="Foto-Themen">${opt(['1','nur passende Themen'],PHF.thema?'1':'0')}${opt(['0','alle Fotos'],PHF.thema?'1':'0')}</select><button class="btn sm sec" onclick="App.plThemen()" title="Welche Foto-Themen auf diesem Plan automatisch erscheinen">Foto-Themen: ${esc(pl?(planThemen(pl)||['alle']).map(t=>t==='alle'?'alle':themaLabel(t).split(' ')[0]).join(', '):'')}</button><span class="sm mut" id="phCnt"></span></div>`}
 App.plThemen=()=>{const pl=PV&&PV.pl;if(!pl)return;const t=planThemen(pl)||[];openModal(`<h3>Foto-Themen für diesen Plan</h3><p class="sm mut">Fotos mit diesen Themen erscheinen hier automatisch per GPS. Fotos ohne Thema und manuell gesetzte Pins erscheinen immer. Keine Auswahl = alle Themen.</p>${THEMEN.map(([k,l])=>`<label class="cbl" style="display:block;margin:6px 0"><input type="checkbox" class="plth" value="${k}" ${t.includes(k)?'checked':''}> ${esc(l)}</label>`).join('')}<div class="btnrow"><button class="btn" onclick="App.plThemenSave()">Speichern</button><button class="btn sec" onclick="App.plThemenReset()">Standard</button><button class="btn sec" onclick="App.closeModal()">Abbrechen</button></div>`)};
@@ -1228,7 +1291,7 @@ function phListModal(ps){ps=ps.slice().sort((a,b)=>(a.m.taken||'').localeCompare
 App.phPop=id=>photoPinPopup(id);
 function photoPinPopup(id){const v=PV;const p=(v&&v.phAll||[]).find(q=>q.m.id===id);if(!p)return App.viewPhoto(id);const m=p.m,ow=p.ow;
  const srcTxt=p.src==='man'?'manuell im Plan gesetzt':p.src==='geo'?`automatisch – Handy-Standort bei Aufnahme${m.gps.acc?' (±'+fmtM(m.gps.acc)+')':''}`:`automatisch per Foto-GPS${m.gps.acc?' (±'+fmtM(m.gps.acc)+')':''}`;
- openModal(`<h3>📷 Foto</h3><img class="big" data-photo="${id}" alt="Foto" onclick="App.viewPhoto('${id}')"><p class="sm"><b>${esc(fmtDT(m.taken)||fmtD(ow.date)||'')}</b><br>Quelle: ${ow.href?`<a href="${ow.href}" onclick="App.closeModal()">${esc(ow.label)}</a>`:esc(ow.label)}<br><label class="sm">Thema <select onchange="App.phThema('${id}',this.value)">${opt(['','– ohne Thema –'],m.thema||'')}${THEMEN.map(x=>opt(x,m.thema||'')).join('')}</select></label>${m.thema&&!themaPasst(v.pl,m)?' <span class="sm mut">(passt nicht zu diesem Plan)</span>':''}<br><label class="cbl sm"><input type="checkbox" ${hasTag(m,'cctv')?'checked':''} onchange="App.phTag('${id}','cctv',this.checked)"> 📹 CCTV-Mastfoto${m.mast?' ('+esc(m.mast)+')':''}</label><br><label class="cbl sm"><input type="checkbox" ${hasTag(m,'trafo')?'checked':''} onchange="App.phTag('${id}','trafo',this.checked)"> 🔌 Trafostation</label>${hasTag(m,'trafo')?` <select class="pvsel" onchange="App.phStation('${id}',this.value)" aria-label="Station"><option value="">– Station wählen –</option>${Object.keys(TRAFO_ST).map(k=>opt([k,'Station '+k],m.station||'')).join('')}</select>${m.station&&m.stationD!=null?` <span class="sm mut">(automatisch${m.stationQ==='block'?' nach Zeitblock':''}, ca. ${m.stationD} m)</span>`:''}<br><label class="sm">Aufnahmeseite <select class="pvsel" onchange="App.phSeite('${id}',this.value)" aria-label="Aufnahmeseite">${opt(['',photoSide({...m,seiteMan:false})?'Auto ('+photoSide({...m,seiteMan:false})+')':'Auto'],m.seiteMan?side4(m.seite):'')}${SEITEN.map(k=>opt([k,k+' – '+SEITEN_NAME[k]],m.seiteMan?side4(m.seite):'')).join('')}</select></label> <span class="sm mut">${(()=>{const b=m.station&&m.gps?trafoBearing(m,m.station):null;return [b?`Standort ca. ${Math.round(b.d)} m ${SEITEN_ADV[sideOf(b.deg)]} der Station`:'',m.gps&&m.gps.dir!=null?`Blickrichtung ${Math.round(m.gps.dir)}° (${compass8(m.gps.dir)})`:''].filter(Boolean).map(esc).join(' · ')})()}</span>`:''}<br><span class="mut">Position: ${esc(srcTxt)}${m.gps&&m.gps.dir!=null?' · Blickrichtung '+Math.round(m.gps.dir)+'°':''}</span></p>
+ openModal(`<h3>📷 Foto</h3><img class="big" data-photo="${id}" alt="Foto" onclick="App.viewPhoto('${id}')"><p class="sm"><b>${esc(fmtDT(m.taken)||fmtD(ow.date)||'')}</b><br>Quelle: ${ow.href?`<a href="${ow.href}" onclick="App.closeModal()">${esc(ow.label)}</a>`:esc(ow.label)}<br><label class="sm">Thema <select onchange="App.phThema('${id}',this.value)">${opt(['','– ohne Thema –'],m.thema||'')}${THEMEN.map(x=>opt(x,m.thema||'')).join('')}</select></label>${m.thema&&!themaPasst(v.pl,m)?' <span class="sm mut">(passt nicht zu diesem Plan)</span>':''}<br><label class="cbl sm"><input type="checkbox" ${hasTag(m,'cctv')?'checked':''} onchange="App.phTag('${id}','cctv',this.checked)"> 📹 CCTV-Mastfoto${m.mast?' ('+esc(m.mast)+')':''}</label><br><label class="cbl sm"><input type="checkbox" ${hasTag(m,'trafo')?'checked':''} onchange="App.phTag('${id}','trafo',this.checked)"> 🔌 Trafostation</label>${hasTag(m,'trafo')?` <select class="pvsel" onchange="App.phStation('${id}',this.value)" aria-label="Station"><option value="">– Station wählen –</option>${Object.keys(TRAFO_ST).map(k=>opt([k,'Station '+k],m.station||'')).join('')}</select>${m.station&&m.stationD!=null?` <span class="sm mut">(automatisch${m.stationQ==='block'?' nach Zeitblock':''}, ca. ${m.stationD} m)</span>`:''}<br><label class="sm">Aufnahmeseite <select class="pvsel" onchange="App.phSeite('${id}',this.value)" aria-label="Aufnahmeseite">${opt(['',photoSide({...m,seiteMan:false})?'Auto ('+photoSide({...m,seiteMan:false})+')':'Auto'],m.seiteMan?side4(m.seite):'')}${SEITEN.map(k=>opt([k,k+' – '+SEITEN_NAME[k]],m.seiteMan?side4(m.seite):'')).join('')}</select></label> <span class="sm mut">${(()=>{const b=m.station&&m.gps?trafoBearing(m,m.station):null;return [b?`Standort ca. ${Math.round(b.d)} m ${SEITEN_ADV[sideOf(b.deg)]} der Station`:'',m.gps&&m.gps.dir!=null?`Blickrichtung ${Math.round(m.gps.dir)}° (${compass8(m.gps.dir)})`:'',m.seiteQ==='block'?`Seite aus Sonne${m.sonne?' ('+m.sonne[0]+'°/'+m.sonne[1]+'° hoch)':''} + Reihenfolge: Foto ${m.seiteNr}/4 ${ANSICHT[(m.seiteNr||1)-1]}, Vorderseite nach ${m.seiteFront}, Sicherheit ${m.seiteConf}${m.seiteDreh&&m.seiteDreh!=='0'?' · Station gedreht '+String(m.seiteDreh).replace('s','° gespiegelt').replace(/^(\d+)$/,'$1°'):''}${m.seiteGps?' · GPS-Peilung ergäbe '+m.seiteGps:''}`:''].filter(Boolean).map(esc).join(' · ')})()}</span>${m.station?drehUi(m):''}`:''}<br><span class="mut">Position: ${esc(srcTxt)}${m.gps&&m.gps.dir!=null?' · Blickrichtung '+Math.round(m.gps.dir)+'°':''}</span></p>
  <div class="btnrow">${ow.href&&ow.k!=='plan'?`<button class="btn sm" onclick="App.closeModal();go('${ow.href}')">${ow.k==='tagebuch'?'Tagebuch öffnen':ow.k==='mangel'?'Mangel öffnen':'Öffnen'}</button>`:''}<button class="btn sm sec" onclick="App.viewPhoto('${id}')">Foto groß</button><button class="btn sm sec" onclick="App.phMove('${id}')">Verschieben</button><button class="btn sm dan" onclick="App.phUnpin('${id}')">Vom Plan entfernen</button>${ow.k==='plan'?`<button class="btn sm dan" onclick="App.phDelete('${id}')">Foto löschen</button>`:''}</div><div class="btnrow"><button class="btn sec blk" onclick="App.closeModal()">Schließen</button></div>`)}
 App.phThema=async(id,t)=>{const m=clone(pmOf(id)||{id});if(t)m.thema=t;else delete m.thema;await pmSave(m);pvPhotoPins();if(m.thema&&PV&&!themaPasst(PV.pl,m)&&PHF.thema)toast('Thema passt nicht zu diesem Plan – Foto wird hier ausgeblendet');};
 App.phMove=id=>{App.closeModal();if(PV.mode!=='foto')pvSetMode('foto');PV.focusPh=id;pvPhotoPins();toast('Kamera-Pin mit dem Finger an die richtige Stelle ziehen')};
