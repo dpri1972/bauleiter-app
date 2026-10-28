@@ -266,7 +266,7 @@ input[type=checkbox]{width:24px;height:24px;min-height:0;padding:0;flex:none;acc
 <style id="pageStyle"></style>
 <script>
 'use strict';
-const VERSION='1.8.2';
+const VERSION='1.9.0';
 /* ================= Hilfsfunktionen ================= */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -347,7 +347,73 @@ App.viewPhoto=async id=>{const d=await getPhoto(id);if(!d)return;openModal(`<img
 let DRAFT=null,MD=null;
 async function discardDraft(){if(DRAFT&&DRAFT._newPhotos)for(const id of DRAFT._newPhotos){await dbDel('photos',id);photoCache.delete(id)}DRAFT=null}
 async function commitPhotos(d){for(const id of d._removed||[]){await dbDel('photos',id);photoCache.delete(id)}}
-App.b=el=>{const t=el.dataset.m?MD:DRAFT;if(!t)return;setPath(t,el.dataset.k,el.type==='checkbox'?el.checked:el.value);if(el.dataset.k.startsWith('staff'))updStaffSum()};
+/* ===== v1.9.0: Wetter im Bautagebuch automatisch eintragen (Open-Meteo, ohne Key) =====
+   Beim Öffnen eines neuen Eintrags und beim Ändern des Datums werden leere/Standard-Wetterfelder befüllt. Manuelle Eingaben werden nie überschrieben
+   (außer über „🌦 Wetter neu laden“ nach Rückfrage). Gesendet werden nur das Datum und auf 0,01° (~1 km) gerundete Koordinaten.
+   Wetterlage: dominanter WMO-Code 6–18 Uhr (Gewitter > Schneeregen > Regen/Schauer/Niesel/Schnee ab 3 Std. > Nebel ab 6 Std. > Frost > Bewölkung aus cloud_cover).
+   Niederschlag: Summe 6–18 Uhr (mm): <0,2 kein · <2 leicht · <10 mäßig · sonst stark. Temp. morgens = 7 Uhr, mittags = 13 Uhr (auf 1 °C gerundet).
+   Wind: stärkster Stundenmittelwert 6–18 Uhr (km/h): <5 windstill · <20 schwach · <39 mäßig · <62 stark · sonst stürmisch; Böen ≥ 62 → mind. stark, ≥ 90 → stürmisch. */
+const WX_CACHE=new Map(),WX_DEF={lat:48.89,lon:12.42};
+const wxR2=x=>Math.round(x*100)/100;
+function wxLoc(pid){const s=S.settings,p=proj(pid),name=(p&&p.name)||'Projektstandort';
+ const la=parseFloat(String(s.wxLat||'').replace(',','.')),lo=parseFloat(String(s.wxLon||'').replace(',','.'));
+ if(isFinite(la)&&isFinite(lo)&&Math.abs(la)<=90&&Math.abs(lo)<=180)return {lat:wxR2(la),lon:wxR2(lo),src:'Einstellung',name};
+ const med=a=>{a=a.slice().sort((x,y)=>x-y);return a[Math.floor(a.length/2)]};
+ const g=S.photometa.filter(m=>m.projectId===pid&&m.gps&&isFinite(+m.gps.lat)&&isFinite(+m.gps.lon));
+ if(g.length>=3)return {lat:wxR2(med(g.map(m=>+m.gps.lat))),lon:wxR2(med(g.map(m=>+m.gps.lon))),src:'Foto-GPS ('+g.length+' Fotos)',name};
+ const pts=[];for(const pl of S.plans.filter(x=>x.projectId===pid))for(const pg of pl.pages||[])for(const q of (pg.geo&&pg.geo.pts)||[])if(isFinite(+q.lat)&&isFinite(+q.lon))pts.push(q);
+ if(pts.length)return {lat:wxR2(pts.reduce((a,q)=>a+ +q.lat,0)/pts.length),lon:wxR2(pts.reduce((a,q)=>a+ +q.lon,0)/pts.length),src:'Passpunkte der Pläne',name};
+ return {...WX_DEF,src:'Standardwert (bitte in den Einstellungen prüfen)',name}}
+const WX_CAT=c=>c===0?'sonnig':c===1?'heiter':c===2?'wolkig':c===3?'bedeckt':(c===45||c===48)?'Nebel':(c>=51&&c<=57)?'Nieselregen':(c>=61&&c<=67)?'Regen':(c>=80&&c<=82)?'Schauer':((c>=71&&c<=77)||c===85||c===86)?'Schnee':c>=95?'Gewitter':null;
+function wxMap(h,loc){const T=h.time||[],n=T.length;if(n<19)throw new Error('zu wenige Stundenwerte');
+ const sl=(k,a,b)=>{const v=h[k];return v?v.slice(a,b+1).filter(x=>x!=null&&isFinite(x)).map(Number):[]};
+ const t7=h.temperature_2m&&h.temperature_2m[7],t13=h.temperature_2m&&h.temperature_2m[13];if(t7==null||t13==null)throw new Error('keine Temperaturwerte');
+ const cnt={};sl('weather_code',6,18).forEach(c=>{const k=WX_CAT(c);if(k)cnt[k]=(cnt[k]||0)+1});const c=k=>cnt[k]||0;
+ const temps=sl('temperature_2m',6,18),tmin=Math.round(Math.min(...temps)),tmax=Math.round(Math.max(...temps));
+ const mm=sl('precipitation',7,18).reduce((a,b)=>a+b,0),gust=Math.round(Math.max(0,...sl('wind_gusts_10m',6,18))),wmax=Math.max(0,...sl('wind_speed_10m',6,18));
+ const rain=c('Nieselregen')+c('Regen')+c('Schauer'),wet=rain+c('Schnee');let cond;
+ if(c('Gewitter')>=1)cond='Gewitter';
+ else if(c('Schnee')>=2&&rain>=2)cond='Schneeregen';
+ else if(wet>=3)cond=['Regen','Schauer','Schnee','Nieselregen'].sort((a,b)=>c(b)-c(a))[0];
+ else if(c('Nebel')>=6)cond='Nebel';
+ else if(tmax<=0&&mm<0.2)cond='Frost';
+ else{const cl=sl('cloud_cover',6,18),ks=['sonnig','heiter','wolkig','bedeckt'],bs=[0,25,55,90],tot=ks.reduce((x,k)=>x+c(k),0);const m=cl.length?cl.reduce((x,y)=>x+y,0)/cl.length:(tot?ks.reduce((x,k,i)=>x+bs[i]*c(k),0)/tot:50);cond=m<12.5?'sonnig':m<37.5?'heiter':m<75?'wolkig':'bedeckt'}
+ const precip=mm<0.2?'kein':mm<2?'leicht':mm<10?'mäßig':'stark';
+ let wi=wmax<5?0:wmax<20?1:wmax<39?2:wmax<62?3:4;if(gust>=90)wi=4;else if(gust>=62)wi=Math.max(wi,3);const wind=WIND[wi];
+ const f1=x=>x.toFixed(1).replace('.',',');
+ const note=`Quelle: Open-Meteo (automatisch), Standort ${loc.name}; Temp. ${tmin}–${tmax} °C (6–18 Uhr); Niederschlag ${f1(mm)} mm; Böen bis ${gust} km/h`;
+ return {cond,precip,tempMorning:Math.round(t7),tempNoon:Math.round(t13),wind,note,mm,tmin,tmax,gust}}
+async function wxFetch(date,loc){const key=date+'|'+loc.lat+'|'+loc.lon;if(WX_CACHE.has(key))return WX_CACHE.get(key);
+ const today=todayISO(),diff=Math.round((Date.parse(today)-Date.parse(date))/864e5);if(diff<-15)throw new Error('future');
+ const q=`latitude=${loc.lat}&longitude=${loc.lon}&start_date=${date}&end_date=${date}&hourly=temperature_2m,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m&timezone=Europe%2FBerlin&wind_speed_unit=kmh`;
+ const urls=diff<=7?['https://api.open-meteo.com/v1/forecast?'+q]:['https://archive-api.open-meteo.com/v1/archive?'+q,'https://historical-forecast-api.open-meteo.com/v1/forecast?'+q,'https://api.open-meteo.com/v1/forecast?'+q];
+ let err=null;for(const u of urls){const ac=new AbortController(),to=setTimeout(()=>ac.abort(),12000);
+  try{const r=await fetch(u,{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();const res=wxMap(j.hourly||{},loc);WX_CACHE.set(key,res);return res}catch(e){err=e}finally{clearTimeout(to)}}
+ throw err||new Error('keine Daten')}
+const WX_F=['cond','precip','tempMorning','tempNoon','wind','note'],WX_DEFV={precip:'kein',wind:'schwach'};
+const wxState=d=>d._wx=d._wx||{auto:{},touch:{},date:null,failed:null,msg:''};
+function wxMsg(t,cls){const d=DRAFT;if(d)wxState(d).msg=t;const el=document.getElementById('wxMsg');if(el){el.textContent=t||'';el.className='sm '+(cls||'mut')}}
+function wxSet(k,v){const w=DRAFT.weather;w[k]=v;wxState(DRAFT).auto[k]=v;const el=document.querySelector('[data-k="weather.'+k+'"]');if(el)el.value=v}
+async function wxAuto(mode){const d=DRAFT;if(!d||!d.date||(S.settings.wxAuto==='aus'&&mode!=='force'))return;
+ const st=wxState(d);d.weather=d.weather||{};const w=d.weather;
+ if(!/^(20\d\d)-\d\d-\d\d$/.test(d.date))return;
+ const empty=k=>w[k]===''||w[k]==null,isAuto=k=>st.auto[k]!==undefined&&String(w[k])===String(st.auto[k]);
+ const other=()=>['cond','tempMorning','tempNoon','note'].every(k=>empty(k)||isAuto(k));
+ if(mode==='open'){if(st.date===d.date||st.failed===d.date){wxMsg(st.msg);return}if(!d._new&&!other()){st.date=d.date;return}}
+ if(mode==='date'&&(st.date===d.date||st.failed===d.date))return;
+ if(mode==='force'){const manual=['cond','tempMorning','tempNoon','note'].some(k=>!empty(k)&&!isAuto(k))||st.touch.precip||st.touch.wind;
+  if(manual&&!confirm('Die Wetterfelder enthalten Eingaben. Mit den automatisch geholten Werten überschreiben?'))return}
+ const date=d.date,loc=wxLoc(d.projectId);st.date=date;st.failed=null;wxMsg('🌦 Wetter wird geladen …');
+ let r;try{r=await wxFetch(date,loc)}catch(e){if(DRAFT===d&&d.date===date){st.date=null;st.failed=date;wxMsg(e&&e.message==='future'?'Für dieses Datum liegen noch keine Wetterdaten vor – bitte manuell eintragen.':'Wetter konnte nicht automatisch geladen werden (offline?). Bitte manuell eintragen oder „🌦 Wetter neu laden“.','hint')}return}
+ if(DRAFT!==d||d.date!==date)return;
+ const o=other(),free=k=>mode==='force'||(!st.touch[k]&&(empty(k)||isAuto(k)||(o&&WX_DEFV[k]!==undefined&&w[k]===WX_DEFV[k])));
+ const filled=[];for(const k of WX_F)if(free(k)){wxSet(k,r[k]);if(mode==='force')delete st.touch[k];filled.push(k)}
+ wxMsg(filled.length?`🌦 Wetter automatisch eingetragen (Open-Meteo, ${loc.name}, ${wxR2(loc.lat)} N / ${wxR2(loc.lon)} E – ${loc.src}). Bitte prüfen.`:'🌦 Wetter geladen – vorhandene Eingaben bleiben unverändert.')}
+let wxT=null;
+App.wxReload=()=>wxAuto('force').catch(e=>console.warn('wx',e));
+App.b=el=>{const t=el.dataset.m?MD:DRAFT;if(!t)return;setPath(t,el.dataset.k,el.type==='checkbox'?el.checked:el.value);if(el.dataset.k.startsWith('staff'))updStaffSum();
+ if(t===DRAFT&&el.dataset.k.startsWith('weather.'))wxState(DRAFT).touch[el.dataset.k.slice(8)]=true;
+ if(t===DRAFT&&el.dataset.k==='date'){clearTimeout(wxT);wxT=setTimeout(()=>wxAuto('date').catch(e=>console.warn('wx',e)),500)}};
 function opt(o,v){const [val,lab]=Array.isArray(o)?o:[o,o];return `<option value="${esc(val)}" ${String(val)===String(v??'')?'selected':''}>${esc(lab)}</option>`}
 function fld(label,k,o={}){const t=o.m?MD:DRAFT;const v=getPath(t,k)??'';const type=o.type||'text';const dm=o.m?'data-m="1"':'';let inp;
  if(type==='textarea')inp=`<textarea data-k="${k}" ${dm} oninput="App.b(this)" rows="${o.rows||3}" placeholder="${esc(o.ph||'')}">${esc(v)}</textarea>`;
@@ -516,9 +582,9 @@ function tabDiary(p){const l=S.diary.filter(e=>e.projectId===p.id).sort((a,b)=>b
 function updStaffSum(){const el=$('#staffSum');if(el&&DRAFT)el.textContent='Gesamt: '+staffSum(DRAFT.staff)+' Personen'}
 function viewDiaryEdit(p,eid,q){
  if(!DRAFT||DRAFT._key!==location.hash){if(eid==='neu'){const date=q.get('datum')||todayISO();const ex=S.diary.find(x=>x.projectId===p.id&&x.date===date);if(ex){location.replace(`#/projekt/${p.id}/tagebuch/${ex.id}`);return ''}DRAFT={id:uid(),projectId:p.id,date,weather:{cond:'',tempMorning:'',tempNoon:'',precip:'kein',wind:'schwach'},staff:[],activities:'',incidents:'',hindrances:'',photos:[],_new:true}}else{const e=S.diary.find(x=>x.id===eid&&x.projectId===p.id);if(!e)return notFound();DRAFT=clone(e)}DRAFT._key=location.hash}
- const d=DRAFT;setHeader('Bautagebuch '+fmtD(d.date),`#/projekt/${p.id}/tagebuch`);const firms=firmsOf(p);
+ const d=DRAFT;setHeader('Bautagebuch '+fmtD(d.date),`#/projekt/${p.id}/tagebuch`);const firms=firmsOf(p);afterRender=()=>{wxAuto('open').catch(e=>console.warn('wx',e))};
  return `<div class="mut sm" style="margin:0 2px 8px">${esc(p.name)}</div>
- <div class="card">${fld('Datum','date',{type:'date'})}<h3>Wetter</h3><div class="grid g2m">${fld('Wetterlage','weather.cond',{type:'select',options:[['','– bitte wählen –'],...WCOND]})}${fld('Niederschlag','weather.precip',{type:'select',options:[['','–'],...PRECIP]})}${fld('Temp. morgens (°C)','weather.tempMorning',{type:'number',attrs:'inputmode="decimal" step="0.5"'})}${fld('Temp. mittags (°C)','weather.tempNoon',{type:'number',attrs:'inputmode="decimal" step="0.5"'})}${fld('Wind','weather.wind',{type:'select',options:[['','–'],...WIND],cls:'full'})}${fld('Wetter-Bemerkung','weather.note',{type:'textarea',rows:2,cls:'full',ph:'z. B. Temperaturband, Quelle der Wetterangabe'})}</div></div>
+ <div class="card">${fld('Datum','date',{type:'date'})}<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><h3 style="margin:8px 0">Wetter</h3><button class="btn sm sec" type="button" onclick="App.wxReload()">🌦 Wetter neu laden</button></div><div class="sm mut" id="wxMsg" style="margin-bottom:6px"></div><div class="grid g2m">${fld('Wetterlage','weather.cond',{type:'select',options:[['','– bitte wählen –'],...WCOND]})}${fld('Niederschlag','weather.precip',{type:'select',options:[['','–'],...PRECIP]})}${fld('Temp. morgens (°C)','weather.tempMorning',{type:'number',attrs:'inputmode="decimal" step="0.5"'})}${fld('Temp. mittags (°C)','weather.tempNoon',{type:'number',attrs:'inputmode="decimal" step="0.5"'})}${fld('Wind','weather.wind',{type:'select',options:[['','–'],...WIND],cls:'full'})}${fld('Wetter-Bemerkung','weather.note',{type:'textarea',rows:2,cls:'full',ph:'z. B. Temperaturband, Quelle der Wetterangabe'})}</div></div>
  <div class="card"><h3>Personal auf der Baustelle</h3>${d.staff.map((s,i)=>`<div class="srow"><input data-k="staff.${i}.firma" oninput="App.b(this)" value="${esc(s.firma)}" list="firms" placeholder="Firma"><input class="n" type="number" inputmode="numeric" min="0" data-k="staff.${i}.count" oninput="App.b(this)" value="${esc(s.count)}" placeholder="Anz."><button class="xbtn" onclick="App.staffRm(${i})" aria-label="Zeile entfernen">×</button></div>`).join('')||'<p class="mut sm">Noch kein Personal eingetragen.</p>'}
  ${datalist('firms',firms)}<div class="sum" id="staffSum">Gesamt: ${staffSum(d.staff)} Personen</div>
  <div class="btnrow"><button class="btn sm sec" onclick="App.staffAdd()">+ Zeile</button><button class="btn sm sec" onclick="App.staffPrev()">↺ Wie Vortag</button><button class="btn sm sec" onclick="App.staffAll()">Alle Firmen des Projekts</button></div></div>
@@ -1387,6 +1453,7 @@ function viewSettings(){setHeader('Einstellungen');const s=S.settings;const f=(l
  <p class="sm mut">${cnt[0]} Projekte · ${cnt[1]} Kontakte · ${cnt[2]} Tagebucheinträge · ${cnt[3]} Mängel · ${cnt[4]} Aufgaben · ${cnt[5]} Protokolle · ${cnt[6]} Pläne · ${cnt[7]} Zeichnungen/Reihen · ${cnt[8]} Foto-Standorte/-Pins</p><p class="sm mut" id="stinfo"></p>${s.lastExport?`<p class="sm">Letzte Sicherung: ${new Date(s.lastExport).toLocaleString('de-DE')}</p>`:'<p class="hint">Noch keine Sicherung erstellt.</p>'}
  <div class="btnrow"><button class="btn" onclick="App.exportData()">⬇️ Sicherung exportieren (JSON)</button><button class="btn sec" onclick="App.importData('merge')">⬆️ Importieren (zusammenführen)</button><button class="btn sec" onclick="App.importData('replace')">Importieren (ersetzen)</button></div></div>
  ${fotoAutoCard()}
+ <div class="card"><h3>Wetter automatisch (Bautagebuch)</h3><label class="fld"><span>Wetter beim Anlegen/Datumswechsel automatisch eintragen (Open-Meteo)</span><select data-s="wxAuto" onchange="App.setS(this)">${[['','an (empfohlen)'],['aus','aus']].map(x=>opt(x,s.wxAuto||'')).join('')}</select></label><div class="grid"><label class="fld"><span>Breite (°N)</span><input type="text" inputmode="decimal" data-s="wxLat" value="${esc(s.wxLat||'')}" placeholder="automatisch" onchange="App.setS(this)"></label><label class="fld"><span>Länge (°O)</span><input type="text" inputmode="decimal" data-s="wxLon" value="${esc(s.wxLon||'')}" placeholder="automatisch" onchange="App.setS(this)"></label></div><p class="sm mut">Leer = Standort aus den Foto-GPS-Daten bzw. Passpunkten der Projektpläne. Es werden nur das Datum und auf 0,01° (ca. 1 km) gerundete Koordinaten an open-meteo.com gesendet. Manuell eingetragene Werte werden nie überschrieben.</p></div>
  <div class="card"><h3>Pläne</h3><label class="fld"><span>Auflösung beim Hochladen von Plänen</span><select data-s="planRes" onchange="App.setS(this)">${[['','Standard – 3500 px (empfohlen)'],['hoch','Hoch – 5000 px (schärfer, ca. doppelter Speicher)']].map(x=>opt(x,s.planRes||'')).join('')}</select></label><p class="sm mut">PDF-Seiten werden beim Hochladen in Bilder umgewandelt und offline gespeichert; das Original-PDF wird nicht gespeichert. Große Pläne belegen ca. 0,5–2 MB pro Seite und sind in der Sicherung (JSON) enthalten.</p></div>
  <div class="card"><h3>Fotos & Standort</h3><label class="fld"><span>Standort bei Kamera-Aufnahme</span><select data-s="geoCam" onchange="App.setS(this)">${[['','verwenden, wenn das Foto selbst kein GPS enthält (empfohlen)'],['aus','nicht verwenden']].map(x=>opt(x,s.geoCam||'')).join('')}</select></label><p class="sm mut">GPS-Daten (EXIF) werden beim Hinzufügen aus dem Originalfoto gelesen, bevor es verkleinert wird. Fotos mit Standort erscheinen automatisch als 📷-Pin auf eingemessenen Plänen. Hinweis: Manche Handys entfernen den Standort beim Teilen oder beim Auswählen aus der Galerie.</p></div>
  <div class="card"><h3>Sonstiges</h3><div class="btnrow"><button class="btn sec" onclick="App.loadSample()">Beispieldaten laden</button><button class="btn dan" onclick="App.wipe()">Alle Daten löschen</button></div><p class="sm mut" style="margin-top:12px">Bauleiter-App Version ${VERSION} · Tipp: Im Browser-Menü „Zum Startbildschirm hinzufügen“ wählen, dann startet sie wie eine App.</p></div>`}
